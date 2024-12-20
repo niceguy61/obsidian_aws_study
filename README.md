@@ -1,0 +1,1 @@
+# obsidian_aws_study
