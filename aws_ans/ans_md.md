@@ -615,10 +615,9 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 - 프라이빗 DNS를 사용할 때는 자체 DNS 서버를 설정하거나 AWS 제공 DNS를 사용해야 함.
 ### DNS VPC DNS Server (Route 53 Resolver)
 ![[vpc_dns_base.png]]
-### Route 53 Resolver와의 통합 (섹션 3, 주제 3)
+### Route 53 Resolver와의 통합
 
 #### 요약:
-
 - **Route 53 Resolver란?**
     - Amazon Route 53 Resolver는 VPC 내에서 DNS 쿼리를 처리하고 온프레미스 네트워크와의 통합을 지원하는 DNS 해석기입니다.
     - VPC와 온프레미스 네트워크 간 DNS 쿼리를 원활히 전송할 수 있도록 인바운드 및 아웃바운드 엔드포인트를 제공.
@@ -630,26 +629,21 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 - **활용 사례:**
     - 온프레미스 네트워크와 AWS 간의 하이브리드 네트워크에서 통합된 DNS 관리.
     - 여러 VPC와 연결된 복잡한 네트워크 아키텍처에서 DNS 쿼리를 중앙 관리.
-
 #### 장점:
 - 하이브리드 네트워크에서 DNS 쿼리를 쉽게 통합 가능.
 - VPC와 온프레미스 네트워크 간 상호작용을 단순화.
 - 기존 DNS 서버를 유지하면서 AWS 네트워크를 통합할 수 있음.
-
 #### 단점:
 - 엔드포인트 설정 및 운영에 대한 추가 비용 발생.
 - 잘못된 설정으로 인해 DNS 쿼리 흐름에 문제가 발생할 수 있음.
-
 #### AWS에서 관련 서비스:
 - **Route 53 Resolver:** 기본 제공 DNS 해석 및 인바운드/아웃바운드 엔드포인트.
 - **VPC Peering:** 연결된 VPC 간 DNS 쿼리 처리.
 - **Transit Gateway:** 여러 VPC와 온프레미스 네트워크 간 트래픽 관리.
-
 #### 주의사항:
 - 인바운드와 아웃바운드 엔드포인트는 보안 그룹을 통해 접근을 제어해야 함.
 - VPC와 온프레미스 간 IP 주소 충돌이 없는지 확인 필수.
 - 온프레미스 네트워크와 VPC 간 경로 설정이 정확해야 함.
-
 #### 시험에서 자주 등장하는 패턴:
 1. 하이브리드 네트워크에서 DNS 엔드포인트 구성 문제.
 2. DNS 쿼리를 인바운드 및 아웃바운드 엔드포인트로 라우팅하는 시나리오.
@@ -658,7 +652,6 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 ### ### DHCP 옵션 세트
 
 #### 요약:
-
 - **DHCP 옵션 세트란?**
     - DHCP 옵션 세트를 통해 Amazon VPC에서 동적으로 IP 주소 및 네트워크 설정을 제공합니다.
     - 기본적으로 각 VPC는 하나의 DHCP 옵션 세트와 연결되며, 여러 네트워크 매개변수(예: DNS 서버, 도메인 이름 등)를 정의할 수 있음.
