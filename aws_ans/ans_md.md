@@ -819,3 +819,29 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 	- EBS Optimized Instance
 - OS 레벨에서의 네트워크 최적화는 DPDK
 - EFA는 HPC상에서 향상된 Network 성능을 위해 제공하는 OS-Bypass해주는 ENA의 추가 기능
+### Exam Essential
+- VPC 내에서 MTU 사이즈는 **점보 프레임**을 통해 9001 byte까지 지원한다.
+- **MTU가 1500 Byte만 될때는**
+	- igw를 타는 경우
+	- vpc-peering이 외부 리전인 경우
+	- VPN 커넥션과 연결되는 경우
+- 만일 PPS가 병목에 걸려 처리량이 떨어지는 경우 MTU를 늘려서 병목을 없애야 한다.
+- 네트워크 속도 향상을 위해선 **Enhanced Networking 또는 Placement Groups**를 사용할 수 있음
+	- **Enhanced Networking**은 Instance <-> Hypervisor간 대기 시간을 낮춰주는 것.
+	- **DPDK**를 통해서 **OS레벨에서의** 패킷 프로세싱을 더 빠르게 처리한다.
+	- 인스턴스 패밀리별로 별도의 대역폭을 가지고 있음.
+		- vCPU, Network Throughput, Disk I/O, Enhanced Networking 지원 여부까지도.
+- 대역폭은 **다중 플로우에 걸쳐 집계된 대역폭이다.**
+	- 리전 내
+		- EC2의 최대 bandwidth 사용 가능
+		- 리전 내에서 EC2 인스턴스 간 또는 EC2 <-> S3에 대해서 최대 100GBps까지 사용 가능 (Multi Flow)
+	- 리전 밖 (igw, DX)
+		- EC2의 최대 대역폭에서 50%가 떨어짐.
+		- 또한 인스턴스의 vCPU가 32가 위여야 50%만 떨어지고, 32 밑이라면 50%가 추가적으로 더 떨어짐.
+		- ex> 최대 20 -> igw (10) -> c5.xlarge (4vcpu) -> total 5GBps
+- 같은 존간의 대역폭이 5GBps일때 Placement Groups에 배치하면 인스턴스간 10GBps까지 네트웍 속도를 올릴 수 있다. 집계 대역폭은 100GBps로 제한 (ENA)
+- Endpoint와 EC2 인스턴스간에 얻을 수 있는 최대도 100GBps (ENA)
+
+## VPC Traffic Monitoring, Trouble Shooting & Analysis
+
+
