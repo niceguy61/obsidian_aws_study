@@ -844,4 +844,104 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 
 ## VPC Traffic Monitoring, Trouble Shooting & Analysis
 
+### VPC Flow Logs
+- ENI의 내외부 트래픽 캡쳐
+	- VPC, Subnet, ENI Level에서 감시
+	- 모니터 및 Troubleshooting 목적
+	- S3, Cloudwatch Logs, Kinesis Data firehose로도 보낼 수 있음
+- 관리형 서비스에서 오는 네트워크 정보도 취합함.
+	- ELB, RDS, ElastiCache, RedShift, Amazon Workspace, NAT Gateway, TGW 등등 
+![[vpc_flow_log.png]]
+- flow log version : 기본 2, 최신 5
+- Flow Log는 사용자 요구에 따라 커스텀처리 할 수 있음
+![[vpc_flow_log_format.png]]
+- 트러블 슈팅 시나리오
+![[nacl_sg_vpc_flow_log_scenario.png]]
+- VPC Flow Log limit
+	- DNS 서버 로그는 저장되지 않음
+	- EC2 Meta Data, Time Sync, DHCP, Windows Activation, Mirroring Traffic
+- 예전 툴
+	- wireshark (tcpdump)
+	- traceroute
+	- telnet
+	- nslookup : host name resolve
+	- ping
+### VPC Traffic Mirroring
+#### 개요
 
+- **VPC Traffic Mirroring**: AWS VPC 내에서 네트워크 트래픽을 캡처하고 복제해 모니터링 및 보안 분석에 활용하는 기능.
+- **대상**: ENI(Elastic Network Interface)에 대한 트래픽을 복제.
+- **주요 활용 사례**:
+    - 보안 위협 탐지 및 침입 분석
+    - 네트워크 성능 모니터링 및 트러블슈팅
+    - 규정 준수 및 감사
+---
+#### 장점
+
+- **비침투적 트래픽 캡처**: 애플리케이션 성능에 영향 없이 트래픽을 모니터링.
+- **세분화된 트래픽 복제**: 특정 트래픽 필터링 가능(예: 포트, 프로토콜, IP).
+- **네이티브 AWS 서비스**: 추가적인 하드웨어 구성 없이 AWS 내에서 직접 실행.
+- **보안 강화**: 실시간으로 네트워크 침입 감지 및 보안 분석 가능.
+- **확장성**: 필요에 따라 트래픽 복제 대상을 쉽게 확장.
+---
+#### 단점
+
+- **비용**: 트래픽 양에 따라 비용이 증가.
+- **복잡성**: 초기 설정 및 필터 구성에 대한 이해도가 필요.
+- **대상 제한**: ENI 단위로만 트래픽을 복제 가능.
+- **성능 부담**: 대규모 트래픽 복제 시 일부 성능 저하 가능.
+---
+#### 구동 방법
+
+1. **Traffic Mirror Target 생성**: 트래픽을 전송할 대상(예: ENI, NLB, EC2 인스턴스 등) 생성.
+2. **Traffic Mirror Filter 설정**: 복제할 트래픽의 조건(IP, 포트, 프로토콜 등)을 정의.
+3. **Traffic Mirror Session 생성**:
+    - 복제 대상 ENI 선택
+    - 트래픽 필터 및 타겟 연결
+    - 우선순위 설정
+4. **트래픽 분석**: 복제된 트래픽을 보안 도구(Splunk, Wireshark 등)에서 분석.
+---
+### 추가 팁
+
+- 비용 절감을 위해 특정 포트 및 IP 범위만 복제하도록 필터링 설정 권장.
+- NIDS(Network Intrusion Detection System)와 연동해 보안 강화 가능.
+#### VPC Traffic Mirroring – 알아두면 좋은 사항
+
+- VPC 내부 및 외부로 흐르는 트래픽을 미러링하여 네트워크 분석 도구로 전송하고, 잠재적인 네트워크 및 보안 이상 징후를 감지할 수 있도록 함.
+- **미러 소스**는 ENI(Elastic Network Interface).
+- **미러 타겟**은 다른 ENI 또는 NLB(Network Load Balancer, UDP 포트 4789)일 수 있음.
+- **미러 필터** – 필요한 트래픽만 캡처하도록 설정 가능.
+    - 프로토콜, 소스/목적지 포트 범위, CIDR 블록을 지정해 트래픽 필터링.
+    - 번호가 매겨진 규칙을 정의하여 해당 트래픽을 적절한 대상에 전송.
+- 트래픽 미러 소스와 미러 타겟(모니터링 장치)은 동일한 VPC에 있거나,
+    - 동일 리전의 VPC 피어링 또는 트랜짓 게이트웨이(transit gateway)를 통해 연결된 다른 VPC에 위치할 수 있음.
+- 소스와 목적지는 서로 다른 AWS 계정에 있을 수 있음.
+### VPC Features for Network Analysis
+| 항목             | Reachability Analyzer            | Network Access Analyzer           |
+| -------------- | -------------------------------- | --------------------------------- |
+| **목적**         | 특정 소스에서 대상까지 네트워크 경로의 연결 여부 분석   | 네트워크 경로에서 잠재적인 과도한 접근 권한을 분석 및 식별 |
+| **작동 방식**      | 소스에서 대상까지 경로 추적 및 연결 상태 확인       | 다양한 경로를 분석하여 과도한 네트워크 접근을 시각화     |
+| **주요 기능**      | - 특정 경로에 대한 도달 가능성 확인            | - 접근 가능한 경로 분석 및 평가               |
+|                | - 네트워크 구성 문제 식별                  | - 보안 정책 위반 가능성 감지                 |
+| **장점**         | - 직관적인 네트워크 경로 시각화               | - 광범위한 네트워크 분석 가능                 |
+|                | - 특정 경로에 대한 세부 분석                | - 보안 및 접근 권한을 통합적으로 검토            |
+| **단점**         | - 특정 소스/대상 경로에 한정                | - 과도한 경로 식별 시 분석 시간이 길어질 수 있음     |
+|                | - 네트워크 접근 범위 분석은 불가능             | - 네트워크 구성 변경 사항 추적 어려움            |
+| **사용 사례**      | - 두 인스턴스 간 통신 문제 해결              | - 과도한 권한 부여된 네트워크 구성 감지           |
+|                | - 특정 인스턴스가 접근 불가능한 경우 경로 추적      | - 대규모 네트워크 접근 정책 감사 및 리포트         |
+|                | - 방화벽 규칙 및 보안 그룹 구성 검토           | - 네트워크 보안 태세 개선 및 규정 준수 확인        |
+| **탐지 가능한 리소스** | - ENI(Elastic Network Interface) | - ENI(Elastic Network Interface)  |
+|                | - EC2 인스턴스                       | - EC2 인스턴스                        |
+|                | - 인터넷 게이트웨이                      | - 인터넷 게이트웨이                       |
+|                | - NAT 게이트웨이                      | - NAT 게이트웨이                       |
+|                | - Transit Gateway                | - Transit Gateway                 |
+|                | - VPC 피어링                        | - VPC 피어링                         |
+|                | - 보안 그룹(Security Group)          | - 보안 그룹(Security Group)           |
+|                | - 네트워크 ACL                       | - 네트워크 ACL                        |
+|                | - AWS PrivateLink                | - AWS PrivateLink                 |
+|                | - 로드 밸런서(ALB/NLB)                | - 로드 밸런서(ALB/NLB)                 |
+|                |                                  | - S3 버킷 정책                        |
+|                |                                  | - Lambda 함수 정책                    |
+|                |                                  | - IAM 정책                          |
+
+![[reachability_analyzer_vs_network_access_analyzer.png]]

@@ -173,19 +173,20 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "4e0e79bc623a9ba9",
+  "active": "acf66450a02d42c5",
   "lastOpenFiles": [
+    "image/reachability_analyzer_vs_network_access_analyzer.png",
+    "image/nacl_sg_vpc_flow_log_scenario.png",
+    "image/vpc_flow_log_format.png",
+    "Pasted image 20250103164705.png",
     "ans_md.md",
+    "image/vpc_flow_log.png",
     "image/vpn_dx_bandwidth.png",
     "image/ec2_max_bandwidth_ena.png",
     "image/ec2_bandwidth_limit.png",
     "image/dpdk.png",
     "Pasted image 20250102202545.png",
     "image/vpc_with_account_region_az.png",
-    "image/vpc_security_group_2.png",
-    "image/vpc_security_group.png",
-    "image/vpc_route_table.png",
-    "image/vpc_nacl.png",
     "image",
     "Welcome.md"
   ]
