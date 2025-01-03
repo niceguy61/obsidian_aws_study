@@ -691,3 +691,131 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 1. DHCP 옵션 세트를 사용하여 VPC 내 네트워크 설정 변경 문제.
 2. 커스텀 DNS 서버를 사용한 구성 시나리오.
 3. DHCP 옵션 세트와 기본 VPC 네트워크 매개변수의 관계를 묻는 질문.
+
+## 4. Network Performance and Optimization
+
+### 기초용어
+	- Bandwidth : 최대 통신 가능 속도 (ex: 10mb/s, 10GB/s)
+	- Latency : 지연시간
+		- 단순 지연이 아닌 신호에 의한 지연일 수도 있음. 또는 연결점이 많아서 지연이 발생할 수 있음.
+	- Jitter : 패킷간 지연이 변동된다.
+	- Throughput : 성공적 트래픽 처리량 (ex: 10mb/s)
+		- Bandwidth가 1GB/s라 해서 무조건 처리량이 1GB/s가 될 수 없으며, Latency, Jitter 등 여러가지 요소에 따라 처리량에 영향이 있을 수 있음
+	- Packet per Seconds (PPS) : 초당 패킷 처리량
+
+### Basics of Network performance - Bandwidth, Latency, Jitter, Throughput, PPS, MTU
+- MTU : 일반적으로 1500Bytes (인터넷 표준)
+- Jumbo Frame : MTU보다 더 큰 네트워크 패킷을 보낼 수 있음. (최대 9000bytes)
+	- 장점
+		- 패킷 수 감소: 점보 프레임은 표준 이더넷 프레임(1500바이트)보다 큰 패킷(최대 9000바이트)을 전송하므로, 동일한 데이터 양을 전송할 때 패킷 수가 줄어듭니다.
+		- CPU 및 네트워크 부하 감소: 패킷 수가 줄어들면, 패킷당 발생하는 헤더 처리, 인터럽트, 복사 작업이 감소해 CPU와 네트워크 장치의 부하가 줄어듭니다.
+		- Throughput(처리량) 증가: 패킷 수가 감소하므로, 패킷당 오버헤드가 줄어들어 네트워크의 처리량이 증가합니다. 특히 PPS(Packet Per Second) 제한이 있는 환경에서 효과적입니다.
+	- 단점
+		- 호환성 문제: 모든 네트워크 장치가 점보 프레임을 지원하는 것은 아닙니다. 경로 상의 장치가 점보 프레임을 지원하지 않으면 MTU(Maxi​​mum Transmission Unit) 불일치로 인해 패킷이 드롭되거나 분할됩니다.
+		- 프래그멘테이션 및 재조립 비용: MTU 불일치로 인해 패킷이 쪼개지면 성능 저하가 발생합니다. 재조립 과정에서 CPU 부하가 증가할 수 있습니다.
+		- 메모리 사용량 증가: 큰 프레임을 처리하려면 네트워크 카드와 드라이버가 더 많은 메모리를 필요로 합니다.
+		- 에러 재전송 비용 증가: 점보 프레임에서 에러가 발생하면 큰 데이터 블록을 다시 전송해야 하므로, 재전송 비용이 증가합니다.
+	- Use Case
+		- Instance A -> Route 1 -> Route 2 -> Instance B
+		- Instance A -(MTU 1500 DF=1)> Route 1 (OK) -(MTU 1500)> Route 2 (Not Accept 1500, Change 1000 with ICMP)
+	- **MTU Path Discovery에선 ICMP가 반드시 열려 있어야 한다.**
+	- AWS에선 9001 MTU를 지원하며 VPC 레벨에서 기본으로 동작한다.
+	- 단, IGW, VPC Peering에선 Jumbo Frames를 지원하지 않는다. (MTU 1500)
+	- DX에선 9001 MTU 지원함.
+	- EC2 Cluster placement Group은 물리적으로 붙어 있어서 점보 프레임을 지원하고 최대 네트워크 Throughput을 제공한다.
+	- 점보 프레임은 VPC를 떠나는 트래픽에 대해서 주의해서 사용해야 함. 패킷이 1500바이트를 초과하면 조각화되거나 IP 헤더에 조각화 안 함 플래그가 설정되어 있으면 삭제됨.
+	- 점보 프레임은 ENI에서 정의됨. (tracepath amazon.com)
+	- MTU 확인 하려면 **ip link show {eth name}**
+	- MTU 설정을 수동으로 하려면 **sudo ip link set dev {eth name} mtu {byte number}
+	- tracepath시 ec2에 public ip로 호출할 때와 private ip로 호출할때 MTU에 대한 이슈로 네트워크 성능차가 발생할 수 있음.
+- AWS 내 MTU
+	- VPC 레벨 : Jumbo Frames 지원 (9001 MTU)
+	- VPC Endpoint : MTU 8500 byte 지원
+	- IGW를 벗어나면 1500 MTU로 감소됨
+	- VPC Peering이라고 하더라도 같은 리전이면 MTU 9001 지원
+	- VPC Peering이 다른 리전이면 MTU 1500
+- On-Premise
+	- VGW를 통한 VPN : MTU 1500
+	- TGW를 쓰는 STS VPN : MTU 1500
+	- DX : 9001 MTU 지원
+	- DX via TGW : MTU 8500 for VPC Attachment Over Direct Connect
+
+### ENA
+- 100만 이상의 PPS Performance
+- 인스턴스간 Latency를 줄이는 기술
+- 하이퍼바이저 out과 일관성 있는 성능을 위해 SR-IOV with PCI passthrough 적용
+- Intel ixgbervf driver 또는 Elastic Network Adapter(ENA)를 사용
+- SR-IOV with PCI passthrough는 가상화 수단이며 이 기술을 통해 한개의 NIC에 여러개의 네트워크가 설정된 것처럼 가상함수를 적용해서 여러개의 가상 NIC를 만들 수 있음.
+- PCI가 ENI와 같은 역할을 하여 PCI상에서 여러개의 서버에 통신을 가상의 직렬형태로 연결할 수 있다.
+- 조합시 대기시간이 최소화 되고 데이터 전송 속도가 증가한다.
+- 전제 조건
+	- 인스턴스 형식에 따라 다름
+		- ixgbevf driver를 지원해야 함 (지원시 10Gbps까지)
+		- Elastic Network Adapter (ENA)를 지원해야 함 (지원시 100Gbps까지)
+	- 두가지 모두 충족해야 함
+	- 지원 타입
+		- 100Gbps: ENA 지원
+			- A1, C5, C5a, C5d, C6g, F1, G3, G4, H1, I3, I3en, etc
+		- 10Gbps: Intel 82599 Virtual Function 지원
+			- C3, C4, D2, M4 (m4.16xlarge는 예외), R3, etc
+	- EC2 Cluster Placement Group에 포함되어야 사용 가능한 옵션
+	- Cluster Placement Group이 아니라면 5Gbps로 내려감.
+### DPDK and Elastic Fabric Adapter (EFA)
+- DPDK : Intel Data Plane Development Kit
+	- SR-IOV와 향상된 네트워킹이 인스턴스와 하이퍼바이저간에 패킷 처리 부하를 감소 시킨다.
+	- DPDK는 OS 내에서 벌어지는 packet 처리 부하를 감소시킨다.
+![[dpdk.png]]
+- EFA : ENA에 추가 되어 사용된다.
+	- 낮은 Latency와 높은 throughput
+	- Linux OS 전용
+	- **Windows는 ENA에서 수행한다.**
+	- MPI : Message Passing Interface (모든 노드 사이에서 병렬 통신이 가능하게 하여 네트워크 처리량 증가하게 한다)
+	- c5n.18xlarge, p3dn.24xlarge
+### Bandwidth Limits inside and outside of VPC
+- NAT Gateway는 현재 최대 45Gbps까지 지원하고 있음
+- 더 크게 사용한다면 멀티 NAT Gateway를 사용해야 하며 존을 넘지 않도록 할 것. 존을 넘어가면 추가 데이터 전송요금이 발생하게 됨.
+- EC2의 경우 여러 요소에 의해 인스턴스 자체 대역폭을 결정하게 됨.
+	- 최소
+		- 인스턴스 패밀리
+		- vCPU 크기
+		- 트래픽 목적지
+		- 네트워크 최적화 여부
+		- Nitro 기반 인스턴스 여부
+		- **가급적이면 인스턴스를 최신세대로 정하라.**
+		- 인스턴스에서 네트워킹 대역폭도 설정할 수 있음.
+		![[ec2_bandwidth_limit.png]]
+		
+		- 인터넷 또는 DX로 연결되는 경우 EC2가 제공하는 네트워크 대역폭의 50%만 사용 가능
+		- 인스턴스 vCPU가 32보다 작으면 5GBps로 제한됨.
+		- 트래픽이 igw 또는 S3 또는 다른 존으로 이동하면 50% 또는 5GBps로 대역폭이 내려간다.
+	- 최대
+		- Intel Virtual Function을 쓰면 최대 대역폭 10GBps를 사용가능.
+		- EC2 Cluster Placement 그룹을 통해 ENA를 사용한다면 최대 대역폭 100GBps를 사용 가능
+		![[ec2_max_bandwidth_ena.png]]
+		- S3와 데이터 통신을 빠르게 하기 위해 S3 Endpoint를 쓰게 되면 속도를 높일 수 있다.
+	- VPN and DX Bandwidth
+		- VPG의 경우 총 대역폭은 25GBps이며 여러 VPN연결을 가질 수 있음.
+		- 여러개와 상관없이 VPG의 총 대역폭은 25GBps임.
+		- 만일 TGW라면 ECMP를 활성화하고 대역폭을 두배로 올릴 수 있음.
+		- 직접 연결의 경우 포트 스피드에 의해 대역폭이 결정됨
+		- **DX의 경우 1, 10, 100GBps와 50, 100, 500MBps같은 하위 속도 옵션도 제공.**
+		- TGW의 경우 최대 대역폭이 50GBps.
+	![[vpn_dx_bandwidth.png]]
+	
+### Network I/O Credit
+- Network 또한 EC2 처럼 credit 시스템을 가지고 운영됨.
+- R4, C5 패밀리는 network I/O Credit Mechanism으로 동작하고 있음.
+- **특히 벤치마크 상황등에 해당 상황이 발생될 수 있으므로 속도가 느려지면 요런 요소도 고려할 것.**
+### Summary
+- 빠른 네트워크 대역폭을 처리하기 위해서 아래의 옵션을 고려할 것.
+	- Jumbo Frame
+	- EC2 Enhanced Networking
+	- Placement groups
+	- EBS Optimized Instance
+	- DPDK
+- Instance 레벨에서의 네트워크 최적화는
+	- Enhance Networking (SR-IOV, ENA, Intel VF 82599)
+	- Placement Groups
+	- EBS Optimized Instance
+- OS 레벨에서의 네트워크 최적화는 DPDK
+- EFA는 HPC상에서 향상된 Network 성능을 위해 제공하는 OS-Bypass해주는 ENA의 추가 기능

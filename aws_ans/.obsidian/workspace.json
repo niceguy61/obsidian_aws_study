@@ -165,16 +165,16 @@
   "active": "4e0e79bc623a9ba9",
   "lastOpenFiles": [
     "ans_md.md",
+    "image/vpn_dx_bandwidth.png",
+    "image/ec2_max_bandwidth_ena.png",
+    "image/ec2_bandwidth_limit.png",
+    "image/dpdk.png",
+    "Pasted image 20250102202545.png",
     "image/vpc_with_account_region_az.png",
     "image/vpc_security_group_2.png",
     "image/vpc_security_group.png",
     "image/vpc_route_table.png",
     "image/vpc_nacl.png",
-    "image/vpc_mean.png",
-    "image/vpc_ip_address_public.png",
-    "image/vpc_dns_resolver_base.png",
-    "image/vpc_dns_base.png",
-    "image/vpc_dns_base 1.png",
     "image",
     "Welcome.md"
   ]
