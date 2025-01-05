@@ -175,6 +175,7 @@
   },
   "active": "acf66450a02d42c5",
   "lastOpenFiles": [
+    "image/vpc_peering.png",
     "image/reachability_analyzer_vs_network_access_analyzer.png",
     "image/nacl_sg_vpc_flow_log_scenario.png",
     "image/vpc_flow_log_format.png",
@@ -186,7 +187,6 @@
     "image/ec2_bandwidth_limit.png",
     "image/dpdk.png",
     "Pasted image 20250102202545.png",
-    "image/vpc_with_account_region_az.png",
     "image",
     "Welcome.md"
   ]

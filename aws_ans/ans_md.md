@@ -842,7 +842,7 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 - 같은 존간의 대역폭이 5GBps일때 Placement Groups에 배치하면 인스턴스간 10GBps까지 네트웍 속도를 올릴 수 있다. 집계 대역폭은 100GBps로 제한 (ENA)
 - Endpoint와 EC2 인스턴스간에 얻을 수 있는 최대도 100GBps (ENA)
 
-## VPC Traffic Monitoring, Trouble Shooting & Analysis
+### VPC Traffic Monitoring, Trouble Shooting & Analysis
 
 ### VPC Flow Logs
 - ENI의 내외부 트래픽 캡쳐
@@ -917,6 +917,8 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
     - 동일 리전의 VPC 피어링 또는 트랜짓 게이트웨이(transit gateway)를 통해 연결된 다른 VPC에 위치할 수 있음.
 - 소스와 목적지는 서로 다른 AWS 계정에 있을 수 있음.
 ### VPC Features for Network Analysis
+![[reachability_analyzer_vs_network_access_analyzer.png]]
+
 | 항목             | Reachability Analyzer            | Network Access Analyzer           |
 | -------------- | -------------------------------- | --------------------------------- |
 | **목적**         | 특정 소스에서 대상까지 네트워크 경로의 연결 여부 분석   | 네트워크 경로에서 잠재적인 과도한 접근 권한을 분석 및 식별 |
@@ -944,4 +946,21 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 |                |                                  | - Lambda 함수 정책                    |
 |                |                                  | - IAM 정책                          |
 
-![[reachability_analyzer_vs_network_access_analyzer.png]]
+## 5. VPC Peering
+### VPC Peering is?
+- AWS 네트워크를 이용해 VPC 2개를 연결하는 과정이며 동일한 네트워크를 사용하는 효과를 가지게 하는 것이다.
+- AWS의 다른 계정에도 사용할 수 있고 다른 리전의 VPC에도 연동이 된다.
+- CIDR이 겹치지 않아야 한다.
+### Step
+1. Create VPC-A (10.10.0.0/16)
+2. Attach igw with VPC-A
+3. Create Public Subnet in VPC-A (10.10.0.0/24)
+4. Create EC2 in Public Subnet and Assign IP and Open Port 22
+5. Create VPC-B (10.20.0.0/16)
+6. Create Private Subent in VPC-B (10.20.0.0/24)
+7. Create EC2 in Private Subnet and Open Port 22, ICMP open in VPC-A CIDR
+8. Create VPC Peering VPC-A to VPC-B
+9. Accept Connect request in VPC-B
+10. Modify Route Table in both side for Traffic on other VPC
+11. Login EC2-A Instance from EC2-B (ping or SSH)
+![[vpc_peering.png]]
