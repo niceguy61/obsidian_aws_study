@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "5771c3b524fc4fcf",
+        "id": "003c5eb9890aaade",
         "type": "tabs",
         "children": [
           {
-            "id": "4e0e79bc623a9ba9",
+            "id": "00b0287c66aace68",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -175,18 +175,18 @@
   },
   "active": "acf66450a02d42c5",
   "lastOpenFiles": [
-    "image/vpc_peering.png",
-    "image/reachability_analyzer_vs_network_access_analyzer.png",
-    "image/nacl_sg_vpc_flow_log_scenario.png",
-    "image/vpc_flow_log_format.png",
-    "Pasted image 20250103164705.png",
+    "image/vpc_gateway_endpoint_pol_case.png",
+    "image/vpc_gateway_endpoint_pol_from_s3.png",
+    "image/vpc_gateway_endpoint_pol2.png",
+    "image/vpc_gateway_endpoint_pol1.png",
     "ans_md.md",
-    "image/vpc_flow_log.png",
-    "image/vpn_dx_bandwidth.png",
-    "image/ec2_max_bandwidth_ena.png",
-    "image/ec2_bandwidth_limit.png",
-    "image/dpdk.png",
-    "Pasted image 20250102202545.png",
+    "Pasted image 20250105115618.png",
+    "image/vpc_gateway_endpoint_ex2.png",
+    "image/vpc_gateway_endpoint_ex1.png",
+    "image/vpc_endpoint_type.png",
+    "image/vpc_peering_error2.png",
+    "image/vpc_peering_error1.png",
+    "image/vpc_peering_limit.png",
     "image",
     "Welcome.md"
   ]
