@@ -1014,10 +1014,12 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 	6. Public EC2에서 ssh로 Private EC2로 접근
 	7. S3 파일이 업로드 되는지 확인
 - Case
-	- EC2 -> S3로 데이터를 보낼때 막힌다?
+	- EC2 -> S3로 데이터를 보낼 때 막힌다?
+	- IAM Role에 막힌 게 있는지 확인할 것.
 	- Security Group에 VPC Endpoint가 열려 있는지 확인할 것.
 	- Route Table에 VPC Endpoint가 있는지 확인할 것.
 	- VPC Endpoint 정책에 문제가 있는지 확인할 것.
 	- S3 Bucket Policy에 문제가 있는지 확인할 것.
 	![[vpc_gateway_endpoint_pol_case.png]]
-	
+### VPC Gateway Endpoint Access From Remote Network
+![[vpc_gateway_endpoint_remote_ok.png]]

@@ -175,6 +175,8 @@
   },
   "active": "acf66450a02d42c5",
   "lastOpenFiles": [
+    "image/vpc_gateway_endpoint_remote_ok.png",
+    "image/vpc_gateway_endpoint_remote_access.png",
     "image/vpc_gateway_endpoint_pol_case.png",
     "image/vpc_gateway_endpoint_pol_from_s3.png",
     "image/vpc_gateway_endpoint_pol2.png",
@@ -185,8 +187,6 @@
     "image/vpc_gateway_endpoint_ex1.png",
     "image/vpc_endpoint_type.png",
     "image/vpc_peering_error2.png",
-    "image/vpc_peering_error1.png",
-    "image/vpc_peering_limit.png",
     "image",
     "Welcome.md"
   ]
