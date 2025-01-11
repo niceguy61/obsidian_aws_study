@@ -972,7 +972,7 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 ![[vpc_peering_limit.png]]
 ### VPC Peering으로 통신이 안되는 사례
 ![[vpc_peering_error1.png]]![[vpc_peering_error2.png]]
-## 6. VPC Endpoint
+## 6. VPC Gateway Endpoint
 ### 개요
 - Private Network 상황에서 다른 AWS Service를 사용할 수 있게 한다.
 - AWS 타 서비스 연결 시, IGW, NAT Gateway가 필요하지 않다.
@@ -1023,3 +1023,85 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 	![[vpc_gateway_endpoint_pol_case.png]]
 ### VPC Gateway Endpoint Access From Remote Network
 ![[vpc_gateway_endpoint_remote_ok.png]]
+
+## 7. VPC Interface Endpoint and PrivateLink
+### VPC Interface Endpoint
+- ENI를 이용해서 VPC에 접근
+- Interface Endpoint는 AZ 별로 배치해야 한다.
+- **0.01$/hr per AZ**
++ **0.01$/GB**
++ Security Group을 사용하므로 inboud rule을 항상 체크해야 함.
++ 지역별 DNS를 사용하여 IP 선택할 수 있지만 특정 ENI를 선택은 불가능하다.
++ 현재는 IPv4만 지원하고 있고 프로토콜은 TCP만 지원 가능.
++ Route 53이 UDP를 지원하므로 Interface Endpoint를 통해 DNS를 체크하는 것이 아니기 때문에 TCP만 제공해도 현재는 큰 문제가 없음.
+### VPC PrivateLink
+- 보안에 좋고 1000개 가까운 VPC에 연동이 가능 (다른 계정 포함)
+- VPC Peering, igw, NAT gw, route table 모두 불필요함.
+- 대신 NLB (Service VPC)와 ENI (Customer VPC)가 필요함
+![[vpc_private_link.png]]
+![[vpc_private_link_architecture.png]]![[vpc_private_link_architecture_onpremise.png]]
+![[vpc_private_link_demo.png]]
+
+- **사전 준비 사항** – httpd 웹 서버를 포함한 EC2 AMI를 생성합니다. 이를 사용하여 VPC-B의 Private EC2 인스턴스를 실행해 더미 서비스를 호스팅합니다.
+- VPC-B를 생성하고 2개의 Private 서브넷을 설정합니다.
+- 이전에 생성한 AMI를 사용하여 Private 서브넷에 EC2 인스턴스를 실행합니다.
+- 다른 Private 서브넷에 NLB(Network Load Balancer)를 생성하고, NLB 뒤에 EC2 인스턴스를 등록합니다.
+- VPC-B에서 VPC Endpoint Service를 생성하고 NLB를 연결합니다.
+- VPC-A와 VPC-B가 서로 다른 AWS 계정에 있는 경우, VPC-A의 AWS 계정을 허용 목록(Whitelist)에 추가합니다.
+- Public 및 Private 서브넷을 포함한 Service Consumer VPC(VPC-A)를 생성합니다.
+- VPC-A에서 VPC Endpoint를 생성하고, 위에서 생성한 Endpoint Service를 검색합니다.
+- Consumer VPC의 Private EC2 인스턴스에 로그인하고 VPC Endpoint DNS에 접근합니다.
+
+### VPC Interface Endpoint - DNS
+- private endpoint interface hostname을 가진 ENI를 배포
+- interface endpoint용 private DNS 세팅
+	- 서비스의 public hostname이 private hostname으로 IP Resolve 해줄 것이다.
+	- VPC 세팅: "Enable DNS Hostnames"와 "Enable DNS Support"가 꼭 켜져 있어야 한다.
+- Private DNS가 켜져 있으면, 소비자 VPC에는 
+	- Public Pattern: servicename.region.amazonaws.com
+	- Private Pattern: vpce-12345.ab.ec2.us-east-1.vpce.amazonaws.com
+![[vpc_interface_endpoint_dns.png]]
+![[vpc_private_link_disabled.png]]
+
+- Subnet 1 -> kinesis.us-east-1.amazon.com -> igw
+- Subnet 1 (no igw) -> vpce-123-ab.kinesis.us-east-1.vpce-amazonaws.com -> interface endpoint
+- Subnet 2 (no igw) -> <<Interface Endpoint DNS를 쓴다는 조건>> interface endpoint -> kinesis
+
+### VPC Interface Endpoint from 원격 네트워크
+![[vpc_interface_endpoint_remote.png]]
+
+- VPC에는 당연히 정상적으로 동작함.
+- On-Premise는 직접 해석이 불가능 하므로 Custom Route 53 Resolver를 사용하여 해결해야 함.
+
+### VPC PrivateLink vs VPC Peering
+
+|        | VPC Peering                     | VPC PrivateLink                        |
+| ------ | ------------------------------- | -------------------------------------- |
+| 연결성    | Peered된 VPC간의 여러 리소스와 연동이 가능하다. | 타 VPC의 특정 어플리케이션만 연결할 수 있다.            |
+| 연결 제한  | CIDR이 중복된 경우, 연결할 수 없다.         | CIDR이 중복되더라도 상관없이 연결할 수 있다.            |
+| 연결 max | 최대 125개 연결 Peering              | 제한 없음.                                 |
+| 양방향 통신 | Peering이 되고 나면 양방향 통신이 허용됨      | 단 방향만 통신 가능. 즉 A->B는 되지만, B->A는 되지 않음. |
+### Summary
+- **VPC 피어링**은 동일 리전 또는 서로 다른 리전의 두 VPC 간 통신을 가능하게 합니다.
+- **VPC 엔드포인트**는 인터넷 게이트웨이, NAT 장치, VPN 연결 또는 AWS Direct Connect 연결 없이, PrivateLink를 통해 지원되는 AWS 서비스 및 기타 서비스를 VPC와 안전하게 연결할 수 있도록 합니다.
+- VPC 내 인스턴스는 서비스 내 리소스와 통신하기 위해 공인 IP 주소가 필요하지 않습니다.
+- VPC와 다른 서비스 간 트래픽은 Amazon 네트워크를 벗어나지 않습니다.
+- **게이트웨이 VPC 엔드포인트**는 서비스를 연결할 수 있게 해주지만 VPC 내 네트워크 구성 요소로 존재하지는 않습니다.
+- **인터페이스 VPC 엔드포인트**는 탄력적 네트워크 인터페이스, 비공개 IP 주소, DNS 이름으로 구성되며, 이를 통해 VPC 내부에서 AWS 클라우드 서비스를 안전하게 액세스할 수 있습니다.
+- **AWS PrivateLink**는 인터페이스 VPC 엔드포인트의 확장 기능으로, 사용자가 자신의 엔드포인트를 생성하거나 다른 사용자가 생성한 엔드포인트를 사용할 수 있도록 합니다.
+
+### Exam Essential
+- **VPC 피어링**은 전달 라우팅(transitive routing)을 지원하지 않습니다. 따라서 피어링 연결을 통해 다른 VPC의 IGW(인터넷 게이트웨이)나 NAT에 접근할 수 없습니다.
+- VPC 피어링은 다른 VPC의 보안 그룹(Security Group)을 인바운드 규칙의 소스로 사용할 수 있습니다.
+- 최대 125개의 VPC 피어링 연결을 생성할 수 있습니다.
+- **VPC Gateway Endpoint**는 IGW(인터넷 게이트웨이)나 NAT 없이 동일 AWS 리전에서 S3 또는 DynamoDB와의 비공개 연결을 가능하게 합니다.
+- VPC Gateway Endpoint를 통해 트래픽을 라우팅하려면 필요한 서브넷의 라우팅 테이블을 수정해야 합니다.
+- VPC Gateway Endpoint는 Direct Connect/VPN 또는 VPC 피어링을 통해 액세스할 수 없습니다.
+- **VPC 인터페이스 엔드포인트**는 서브넷에 ENI(탄력적 네트워크 인터페이스)를 생성합니다.
+- 인터페이스 엔드포인트는 리전 및 영역 DNS 이름을 수신합니다.
+- **Route53 프라이빗 호스팅 존**을 사용하여 인터페이스 DNS에 대한 Alias 레코드를 활용해 커스텀 DNS를 사용할 수 있습니다.
+- 인터페이스 엔드포인트는 **Direct Connect 연결**, AWS 관리형 VPN, 그리고 VPC 피어링 연결을 통해 액세스할 수 있습니다.
+- 트래픽은 VPC 내 리소스에서 시작되며, 엔드포인트 서비스는 요청에만 응답할 수 있습니다. 엔드포인트 서비스가 요청을 시작할 수는 없습니다.
+
+## 8. Transit Gateway
+![[transit_gateway.png]]
