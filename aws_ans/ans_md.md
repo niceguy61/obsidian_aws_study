@@ -914,7 +914,7 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
     - 프로토콜, 소스/목적지 포트 범위, CIDR 블록을 지정해 트래픽 필터링.
     - 번호가 매겨진 규칙을 정의하여 해당 트래픽을 적절한 대상에 전송.
 - 트래픽 미러 소스와 미러 타겟(모니터링 장치)은 동일한 VPC에 있거나,
-    - 동일 리전의 VPC 피어링 또는 트랜짓 게이트웨이(transit gateway)를 통해 연결된 다른 VPC에 위치할 수 있음.
+    - 동일 리전의 VPC 피어링 또는 tgw를 통해 연결된 다른 VPC에 위치할 수 있음.
 - 소스와 목적지는 서로 다른 AWS 계정에 있을 수 있음.
 ### VPC Features for Network Analysis
 ![[reachability_analyzer_vs_network_access_analyzer.png]]
@@ -1105,3 +1105,54 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 
 ## 8. Transit Gateway
 ![[transit_gateway.png]]
+- 천개 이상의 VPC 또는 On-Premise 네트워크와 연동가능
+	- 1개 이상의 VPC
+	- TGW와도 연동 가능
+	- SD-WAN/3rd party network appliance와도 연동 가능
+	- VPN
+	- Direct Connect Gateway
+- Multicast Support, MTU, Appliance Mode, AZ 고려, 계정 간 TGW 공유
+![[tgw_sharing.png]]
+![[tgw_connect_vpn.png]]
+![[tgw_connect_direct_connect.png]]![[image/tgw_attachments.png]]
+### TGW Attachments
+![[tgw_attachments.png]]
+
+### TGW VPC Network Pattern
+- **Flat Network** : TGW에 VPC가 평면으로 붙은 hub & spoke의 전형적인 모형
+	- TGW Routing table의 경우 전체 연결이 가능하며 Routing 도메인이 하나다.
+![[vpc_net_pat_flat.png]]
+- **Segmented Network**: Flat 구조 이외에 VPN이 붙는다던지 한다면 기본 AWS 네트워크와 VPN 연결을 구성한다.
+	- VPC간은 통신을 안하지만 모든 VPC가 VPN과 통신이 가능하고 VPN측 추가 라우팅에서 VPC와 IP대역을 연결하면 통신이 가능하게 한다.
+![[vpc_net_pat_segmented.png]]
+### VPC & Subnet Design for TGW
+- VPC를 TGW에 연결할 때, TGW가 VPC 서브넷의 리소스로 트래픽을 라우팅할 수 있도록 하나 이상의 가용 영역(Availability Zone)을 활성화해야 합니다.
+- 각 가용 영역을 활성화하려면 정확히 하나의 서브넷을 지정해야 하며(일반적으로 워크로드 서브넷을 위해 IP를 절약할 수 있는 /28 범위 사용),
+- TGW는 해당 서브넷에 네트워크 인터페이스를 배치하며 서브넷에서 하나의 IP 주소를 사용합니다.
+- 가용 영역을 활성화한 후에는 해당 영역의 모든 서브넷으로 트래픽을 라우팅할 수 있으며, 지정된 서브넷에만 한정되지 않습니다.
+- TGW 연결이 없는 가용 영역에 위치한 리소스는 TGW에 접근할 수 없습니다.
+### TGW AZ Affinity & Appliance Mode
+![[tgw_az_inffinity.png]]
+- TGW는 목적지 트래픽에 도달할때까지 같은 AZ간의 통신으로 유지하려고 한다.
+	- 요금 절감
+	- 트래픽 이동 적음
+	- 만일 AZ가 다운되도 피해가 적음.
+![[tgw_az_inffinity_other_az.png]]
+- 만일 통신하는 존이 다르다면 비대칭 라우팅이라 한다.
+- **네트워크 어플라이언스 상태가 달라서 어플리케이션에서 트래픽 일치 여부를 체크할 경우 문제가 될 수 있다. 아래처럼 어플라이언스에서 트래픽을 삭제처리 할 수 있으므로 어플라이언스 모드를 활성화해야 함.**
+	- **Flow Hash Algorithm**을 이용해서 반환 트래픽에 대해서 Appliance 서버의 AZ가 달라도 그 방향으로 넣어주도록 조정한다.
+	- **5 tuples**: Source Port, IP, Dest Port IP, Protocol을 이용함.
+![[vpc_az_appliance_mode_off.png]]
+![[vpc_az_appliance_mode_on.png]]
+### TGW Peering
+- TGW는 리전 기반 라우터로, 동일한 리전 내에서 VPC를 연결할 수 있습니다.
+- **리전 간 네트워크 연결**을 위해 트랜짓 게이트웨이를 서로 피어링할 수 있습니다.
+- 피어링 연결을 위해 **Static Routes**를 추가해야 하며, **BGP는 지원되지 않습니다.**
+- **리전 간 트래픽**은 암호화되어 AWS 글로벌 네트워크를 통해 전송되며, 공용 인터넷에 노출되지 않습니다. 최대 **50 Gbps** 대역폭을 지원합니다.
+- 피어링된 TGW에는 **고유한 ASN**을 사용하는 것이 좋습니다 (가능한 경우).
+![[tgw_peer_1.png]]
+![[vpc_peer_2.png]]
+### TGW Connect Attachment
+- **Transit Gateway Connect Attachment**를 생성하여 트랜짓 게이트웨이와 VPC에서 실행 중인 서드파티 가상 어플라이언스(SD-WAN 어플라이언스 등) 간의 연결을 설정할 수 있습니다.
+- **Connect Attachment**는 기존 VPC 또는 AWS Direct Connect Attachment를 기본 전송 메커니즘으로 사용합니다.
+- **GRE(Generic Routing Encapsulation) 터널 프로토콜**을 통해 고성능 전송을 지원하며, **BGP(Border Gateway Protocol)**를 사용해 동적 라우팅을 설정합니다.
