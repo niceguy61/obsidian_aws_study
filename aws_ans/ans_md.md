@@ -1155,4 +1155,5 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 ### TGW Connect Attachment
 - **Transit Gateway Connect Attachment**를 생성하여 트랜짓 게이트웨이와 VPC에서 실행 중인 서드파티 가상 어플라이언스(SD-WAN 어플라이언스 등) 간의 연결을 설정할 수 있습니다.
 - **Connect Attachment**는 기존 VPC 또는 AWS Direct Connect Attachment를 기본 전송 메커니즘으로 사용합니다.
-- **GRE(Generic Routing Encapsulation) 터널 프로토콜**을 통해 고성능 전송을 지원하며, **BGP(Border Gateway Protocol)**를 사용해 동적 라우팅을 설정합니다.
+- **GRE(Generic Routing Encapsulation) 터널 프로토콜**을 통해 고성능 전송을 지원하며, **BGP**(Border Gateway Protocol)를 사용해 동적 라우팅을 설정합니다.
+![[tgw_connect_attach_gre.png]]
