@@ -1156,4 +1156,174 @@ Elastic Network Interface (ENI)는 Amazon VPC의 가상 네트워크 카드로, 
 - **Transit Gateway Connect Attachment**를 생성하여 트랜짓 게이트웨이와 VPC에서 실행 중인 서드파티 가상 어플라이언스(SD-WAN 어플라이언스 등) 간의 연결을 설정할 수 있습니다.
 - **Connect Attachment**는 기존 VPC 또는 AWS Direct Connect Attachment를 기본 전송 메커니즘으로 사용합니다.
 - **GRE(Generic Routing Encapsulation) 터널 프로토콜**을 통해 고성능 전송을 지원하며, **BGP**(Border Gateway Protocol)를 사용해 동적 라우팅을 설정합니다.
-![[tgw_connect_attach_gre.png]]
+![[tgw_connect_attachment.png]]
+#### TGW Connect Attachment over the transport Attachment
+![[tgw_con_att_over_trans_attach.png]]![[tgw_con_att_over_dx_trans_attach.png]]
+- TGW Connect Attachment는 DX를 이용해서 On-Premise 네트워크에서 통신하는 third-party 혹은 CGW Applianced에도 연결될 수 있다.
+#### TGW Connect Attachment Summary
+- **Connect Attachments**는 정적 라우트를 지원하지 않습니다. **BGP**는 Transit Gateway Connect의 최소 요구 사항입니다.
+- **Transit Gateway Connect**는 GRE 터널당 최대 **5 Gbps**의 대역폭을 지원합니다. 5 Gbps 이상의 대역폭은 동일한 Connect Attachment에 대해 여러 Connect Peer(GRE 터널)에서 동일한 프리픽스를 광고(Advertise)함으로써 달성됩니다.
+- 각 Connect Attachment는 최대 **4개의 Connect Peer**를 지원하며, 이를 통해 연결당 총 **20 Gbps**의 대역폭을 제공합니다.
+- **추가 설명:**
+	- **정적 라우트 비지원**: Connect Attachment에서는 정적 라우트 대신 **BGP**(Border Gateway Protocol)를 사용하여 동적으로 경로 정보를 교환합니다.
+	- **GRE 터널 대역폭 확장**:
+	    - 기본적으로 GRE 터널당 최대 5 Gbps를 사용할 수 있지만, 여러 GRE 터널을 생성하고 동일한 경로 정보를 공유함으로써 대역폭을 확장할 수 있습니다.
+	    - 예: 4개의 GRE 터널을 사용하면 20 Gbps까지 대역폭을 확장 가능.
+	- **BGP 필수**: GRE 터널과 함께 사용되는 동적 라우팅 프로토콜로 BGP는 연결된 네트워크 간에 경로 정보를 효과적으로 교환합니다.
+### TGW with VPN
+![[image/tgw_with_vpn.png]]![[tgw_with_vpn2.png]]
+- AWS Global Accelerator는 고객 게이트웨이에서 가장 가까운 AWS 엣지 로케이션으로 트래픽을 라우팅하는 데 사용됩니다.
+- 이 설정은 **Transit Gateway VPN Attachment**와 함께 사용할 수 있으며, **Virtual Private Gateway(VGW)**와는 지원되지 않습니다.
+![[tgw_with_vpn3_edge.png]]
+- VPC to On-Premise 간 연결에서 추가적인 대역폭을 가지려면 다중 연결이 가능하다고 생각할 수 있겠지만, VGW당 최대 25GB의 집계 대역폭을 가짐. 터널당 최대 1.25GB의 대역폭을 가지며 다중 연결 트래픽을 로드밸런싱 하려면 ECMP가 필요함.
+![[tgw_with_vpn6.png]]
+- **Transit Gateway의 지원 연결 유형**
+    - VPC 연결
+    - Transit Gateway 피어링
+    - VPN 연결
+- **VPN 연결 개요**
+    - Transit Gateway를 사용해 온프레미스 네트워크를 AWS로 연결 가능.
+    - AWS에서 제공하는 **Site-to-Site IPsec VPN**을 사용.
+    - VPC에 Virtual Private Gateway(VPN Gateway)를 연결하고, 고객 측에서는 고객 라우터를 사용하여 Site-to-Site VPN을 설정.
+- **기존 아키텍처의 한계**
+    - VPN 연결은 VPC 및 고객 게이트웨이마다 개별적으로 설정 필요.
+    - 다수의 VPC 또는 브랜치 오피스를 연결할 경우 관리 복잡성이 증가.
+- **Transit Gateway를 활용한 단순화**
+    - Transit Gateway에 모든 VPC와 VPN 연결을 통합.
+    - 다수의 VPN 연결을 Transit Gateway에 종결시켜 하이브리드 연결(온프레미스 ↔ AWS VPC)을 간소화.
+    - VPN 연결 시 **AWS Global Accelerator**를 활용해 네트워크 경로 최적화:
+        - 트래픽이 가까운 엣지 로케이션을 거쳐 AWS 백본 네트워크로 전송됨.
+        - Virtual Private Gateway에서는 사용할 수 없음.
+- **집계 대역폭 향상**
+    - Virtual Private Gateway의 대역폭 한계:
+        - VPN 터널당 최대 대역폭: 1.25 Gbps.
+        - ECMP(동일 비용 다중 경로) 미지원 → 다중 연결에서도 대역폭 증가 불가.
+    - Transit Gateway를 활용한 집계 대역폭:
+        - ECMP와 동적 라우팅(BGP) 구성.
+        - 최대 4개의 터널을 통해 집계 대역폭을 최대 5 Gbps까지 확장 가능.
+        - **단일 흐름(Per-flow) 대역폭은 여전히 1.25 Gbps로 제한**되나, 다중 파일 전송 시 총 대역폭 증가 가능.
+- **고급 라우팅 설정**
+    - BGP 라우팅 및 ECMP를 통해 다중 VPN 연결 간 트래픽 분산.
+    - CIDR 범위에 따라 특정 VPN 연결에 트래픽을 전달하도록 경로 설정.
+    - VPN 연결 중 하나가 비활성화될 경우, 다른 활성 연결로 트래픽을 재라우팅 가능.
+- **결론**
+    - Transit Gateway와 VPN 연결을 활용하면 네트워크 아키텍처의 복잡성을 줄이고 대역폭을 확장하며, 하이브리드 연결 환경을 최적화 가능.
+    - BGP 라우팅 필수, 정적 라우팅으로는 ECMP 구성 불가.
+### TGW with Direct Connect
+- AWS와 온프레미스 데이터센터 간의 **물리적 연결**을 제공.
+- 안정적이고 빠른 네트워크 연결을 통해 데이터 전송.
+- **Transit Gateway 없이 Direct Connect 사용**
+	- 일반적으로 **Private VIF(Virtual Interface)**를 사용하여 Direct Connect Gateway에 연결.
+	- Direct Connect Gateway는 **최대 10개의 VPC**만 연결 가능.
+	- 수백 개의 VPC 연결이 필요한 경우 확장성 한계에 직면.
+-  **Transit Gateway와 함께 Direct Connect 사용**
+	- **Transit VIF** 사용:
+	    - Direct Connect에 Transit VIF를 생성하고 Direct Connect Gateway에 연결.
+	    - Direct Connect Gateway를 Transit Gateway와 연결하여 다수의 VPC를 지원.
+	- **확장성**:
+	    - 하나의 Transit Gateway는 **수백, 수천 개의 VPC** 연결 가능.
+	    - 하나의 Direct Connect Gateway는 **최대 6개의 Transit Gateway** 연결 지원.
+	    - 하나의 Direct Connect 연결에서는 **최대 4개의 Transit VIF** 생성 가능.
+	    - 결과적으로, 하나의 Direct Connect 연결로 **최대 24개의 Transit Gateway**를 연결 가능.
+- **다중 계정 지원**
+	- Direct Connect와 Transit Gateway는 서로 다른 AWS 계정에 있을 수 있음:
+	    - 예: Direct Connect는 계정 A에, Transit Gateway와 VPC는 계정 B에.
+-  **비용 고려**
+	- **Transit Gateway 데이터 처리 요금**:
+	    - Transit Gateway를 사용할 경우 전송되는 데이터에 대해 **GB당 요금**이 발생.
+	    - 데이터 전송량이 많을 경우 비용이 높아질 수 있으므로 주의 필요.
+	    - 대규모 데이터 전송에는 Transit Gateway 사용이 비효율적일 수 있음.
+- **보안 강화: IP 레벨 암호화**
+	- 기본 Direct Connect 아키텍처는 데이터 트래픽이 **암호화되지 않음**.
+	- 일부 기업에서는 Layer 3 또는 Layer 4 암호화를 요구:
+	    - **IPSec VPN**을 활용하여 트래픽 암호화 가능.
+	    - **Public VIF**를 생성해 AWS의 Public IP와 연결:
+	        - Transit Gateway의 VPN 엔드포인트(Public IP)를 통해 IPSec VPN 연결.
+	        - Direct Connect와 Transit Gateway 간 트래픽 암호화 지원.
+- **추천 아키텍처 요약**
+	- **확장성과 간소화 필요**:
+	    - 다수의 VPC 연결 시 Transit Gateway와 Transit VIF 사용.
+	- **보안 요구**:
+	    - 암호화가 필요한 경우 IPSec VPN과 Public VIF 사용.
+	- **비용 관리**:
+	    - 대규모 데이터 트래픽에는 Transit Gateway 사용을 신중히 고려.
+- **결론**
+	- Transit Gateway는 확장성과 간소화를 제공하지만, **비용**과 **보안 요구**를 함께 고려해야 함.
+	- 특정 요구 사항에 따라 Direct Connect와 Transit Gateway를 결합한 적절한 아키텍처를 선택.
+![[tgw_with_dx.png]]
+- 이 경우 L3, L4 Layer는 암호화를 지원하지 않기 때문에 아래의 방법으로 하면 IPsec VPN을 이용해 네트워크를 암호화할 수 있다.
+![[tgw_with_dx2.png]]
+### Multicast with TGW
+
+#### 멀티캐스트란?
+
+| 항목    | 설명                                         |
+| ----- | ------------------------------------------ |
+| 멀티캐스트 | 하나의 메시지를 여러 대상에게 동시에 전송하는 방식.              |
+| 유니캐스트 | 한 소스 → 한 대상.                               |
+| IP 주소 | Class D 범위: `224.0.0.0 ~ 239.255.255.255`. |
+| 프로토콜  | UDP 기반, 단방향 통신.                            |
+| 활용 사례 | OTT 플랫폼, TV 방송, 주식 거래, 그룹 채팅.              |
+
+#### AWS Transit Gateway의 멀티캐스트 지원
+
+| 항목                 | 설명                                                |
+|----------------------|-----------------------------------------------------|
+| 멀티캐스트 도메인     | 멀티캐스트 그룹이 작동하는 기본 구성 요소.           |
+| ENI                 | ENI를 그룹에 추가하여 멤버십 구성.                   |
+| IGMP                | 동적 그룹 참여 및 탈퇴 지원.                          |
+| 주요 기능            | IPv4/IPv6 지원, 외부 애플리케이션 통합 가능.         |
+
+#### 멀티캐스트 설정 절차
+
+| 단계                  | 설명                                                |
+|-----------------------|-----------------------------------------------------|
+| Transit Gateway 생성  | 멀티캐스트 활성화 필요.                             |
+| 멀티캐스트 도메인 생성 | 서브넷을 도메인에 참여시킴.                         |
+| 멀티캐스트 그룹 생성   | ENI 추가 및 Class D IP 주소 지정.                  |
+| 그룹 멤버십 관리       | 정적(AWS CLI) 또는 동적(IGMP)으로 설정.              |
+
+#### 하이브리드 멀티캐스트 통합
+
+| 항목                  | 설명                                                |
+|-----------------------|-----------------------------------------------------|
+| 지원 환경             | Direct Connect 및 VPN에서 멀티캐스트 미지원.         |
+| 해결 방법             | GRE 터널을 통해 온프레미스와 AWS 연결.              |
+| 트래픽 전달           | 온프레미스 → VPC → Transit Gateway → 멀티캐스트 그룹.|
+
+#### 보안 및 네트워크 ACL 구성
+
+| 항목                  | 설명                                                |
+|-----------------------|-----------------------------------------------------|
+| IGMP 트래픽           | 수신: `224.0.0.1/32`, 발신: `224.0.0.2/32`.         |
+| 멀티캐스트 트래픽      | 멀티캐스트 그룹 IP로부터 수신 및 발신 허용.          |
+| 보안 그룹 및 ACL 설정  | IGMP 및 멀티캐스트 트래픽 허용 필요.                |
+![[tgw_multicast.png]]
+#### 추가 멀티캐스트 고려 사항
+
+| 항목                  | 설명                                                |
+|-----------------------|-----------------------------------------------------|
+| 서브넷 제한           | 한 서브넷은 하나의 멀티캐스트 도메인만 참여 가능.     |
+| ENI 그룹 멤버십        | 동일 도메인 내 여러 멀티캐스트 그룹에 참여 가능.     |
+| IGMPv2 지원           | Join/Leave 메시지로 그룹 동적 참여/탈퇴 지원.         |
+| StaticSourcesSupport  | 특정 멤버만 메시지 송신자로 지정 가능.              |
+| Nitro 제한            | Non-Nitro 인스턴스는 송신 불가. 수신 시 Source/Destination 체크 비활성화 필요. |
+
+#### 제약 사항
+
+| 항목                  | 설명                                                |
+|-----------------------|-----------------------------------------------------|
+| 멀티캐스트 라우팅 제한 | Direct Connect, Site-to-Site VPN, Peering 등 미지원. |
+| 멀티캐스트 공유       | AWS RAM(Resource Access Manager)로 도메인 공유 가능.|
+
+#### 시험 대비 주요 사항
+
+| 항목                  | 설명                                                |
+|-----------------------|-----------------------------------------------------|
+| IGMPv2 프로토콜       | 동적 멤버십 지원.                                   |
+| VPC 및 계정 간 통합 가능 | 멀티캐스트 도메인 공유 가능.                       |
+| 하이브리드 통합        | GRE 터널 필요.                                      |
+
+### 결론
+
+AWS Transit Gateway의 멀티캐스트 기능은 대규모 트래픽 배포를 지원하며, VPC 간 통신 및 하이브리드 환경 통합을 통해 효율적인 네트워크 아키텍처를 제공합니다. 🚀
