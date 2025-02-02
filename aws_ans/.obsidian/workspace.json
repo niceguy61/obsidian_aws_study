@@ -20,8 +20,23 @@
               "icon": "lucide-file",
               "title": "ans_md"
             }
+          },
+          {
+            "id": "7fa2530a1071cedf",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "ans_md.md",
+                "mode": "preview",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "ans_md"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -40,7 +55,8 @@
             "state": {
               "type": "file-explorer",
               "state": {
-                "sortOrder": "alphabetical"
+                "sortOrder": "alphabetical",
+                "autoReveal": false
               },
               "icon": "lucide-folder-closed",
               "title": "파일 탐색기"
@@ -77,7 +93,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 200
   },
   "right": {
     "id": "0934c8c665c2bfbf",
@@ -164,28 +180,28 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:퀵 스위처 열기": false,
+      "switcher:빠른 전환기 열기": false,
+      "daily-notes:오늘의 일일 노트 열기": false,
       "graph:그래프 뷰 열기": false,
       "canvas:새 캔버스 만들기": false,
-      "daily-notes:오늘의 데일리 노트 열기": false,
       "templates:템플릿 삽입": false,
       "command-palette:명령어 팔레트 열기": false,
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "acf66450a02d42c5",
+  "active": "7fa2530a1071cedf",
   "lastOpenFiles": [
-    "image/how_bgp_works4.png",
-    "image/how_bgp_works3.png",
-    "image/bgp_route_sel_aspath.png",
-    "image/how_bpg_works2.png",
-    "image/how_bgp_works.png",
-    "image/hybrid_network_dynamic.png",
-    "image/hybrid_network_static_solve.png",
-    "image/hybrid_network_static_problem1.png",
-    "image/hybrid_network_static_routing.png",
-    "image/hybrid_network.png",
-    "image/tgw_multicast.png",
+    "Pasted image 20250202165239.png",
+    "Pasted image 20250202164939.png",
+    "Pasted image 20250202164925.png",
+    "Pasted image 20250202164026.png",
+    "Pasted image 20250202163422.png",
+    "Pasted image 20250202163347.png",
+    "Pasted image 20250202163345.png",
+    "Pasted image 20250202162501.png",
+    "Pasted image 20250202161032.png",
+    "Pasted image 20250202161016.png",
+    "Pasted image 20250202160307.png",
     "ans_md.md",
     "image",
     "Welcome.md"

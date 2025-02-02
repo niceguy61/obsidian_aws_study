@@ -1370,21 +1370,13 @@ AWS Transit Gateway의 멀티캐스트 기능은 대규모 트래픽 배포를 �
 - **동작 원리**:
     - 각 AS는 BGP 업데이트 메시지에 자신을 AS_PATH에 추가.
     - AS_PATH는 목적지 Network까지의 경로를 나타냄.
-- **그림 설명**
-1. **AS 200 (10.20.0.0/16)**
-    - 목적지: `10.20.0.1`
-    - 경로: `200,200,200,i` (AS_PATH 길이가 짧음).
-    - 10 Mbps 링크를 통해 연결됨.
-2. **AS 400 (10.40.0.0/16)**
-    - 목적지: `10.40.0.1`
-    - 경로: `400,i`.
-3. **AS 300 (10.30.0.0/16)**
-    - 목적지: `10.30.0.1`
-    - 경로: `300,i`.
-- **AS_PATH 경로 업데이트**
-	- AS 200 → AS 400으로 업데이트된 경로는 `400,200,200,i`로 표시.
-	- AS 300 → AS 200으로 전달된 경로는 `200,300,i`로 표시.
-	- 각 AS는 자신을 AS_PATH에 추가하며 경로 정보를 전파.
+- 속도를 빠르게 하는 기술
+	- **AS_PATH Prepending**을 이용하면 강제로 홉을 더 끼워 넣어서 네트워크 경로를 조절 할 수 있다.
+	- 예시
+		- 100 -> 200 (2Mbps), AS_PATH 더 짧아서 기본적으로 우선순위 높음 (200,i)
+		- 100 -> 400 -> 200 (10Mbps) 도 방법이지만, AS_PATH상에선 우선순위 낮음 (400,200,i)
+		- AS_PATH Prepending을 이용해서 강제로 200에 링크를 삽입 (200,200,200,i)
+		- 100 -> 200 연결 시도시 길이가 길어져 100 -> 400 -> 200이 더 우선시 된다.
 #### 2. LOCAL_PREF
 ![[how_bgp_works3.png]]
 - **정의**: BGP에서 AS 내부에서 사용되는 경로 선택 기준으로, 가장 높은 Local Preference 값이 우선.
@@ -1452,3 +1444,405 @@ AWS Transit Gateway의 멀티캐스트 기능은 대규모 트래픽 배포를 �
 - 두 AS 간 여러 경로가 있을 때 사용
 - MED 값이 낮을수록 더 높은 우선순위를 가짐
 - AS 간에 MED 값이 교환됨
+
+## 10. AWS Direct Connect (DX)
+### OSI 7 Layer
+- Application : End User Layer (http, ftp, ssh, dns)
+- Presentation : Syntax Layer (SSL, IMAP, MPEG, Encryption & Compression)
+- Session : Sync & Send to Ports : APIs, Socket, WinSock
+- Transport : End to End Connection (TCP, UDP)
+- Network : Packets (IP, ICMP, IPSec)
+- Datalink : Frames (Ethernet, PPP, Switch, Bridge)
+- Physical : Physical Structure (Coax, Fiber, Wireless, Hubs, Repeaters)
+- 외우기 쉬운 방법?
+	- **"응용 프로그램에서 표준화된 세션을 통해 전송된 네트워크 데이터는 물리적으로 전달된다."**
+	- **"All People Seem To Need Data Processing"**
+![[osi_7_layers.png]]
+### 기본 설명
+- **온프레미스에서 AWS로의 전용 네트워크 연결**
+- **AWS <-> DirectConnect 위치 <-> 온프레미스 데이터 센터**
+- **낮은 지연 시간과 일관된 대역폭**
+- **데이터 전송 비용 절감**
+	- 모든 AWS Direct Connect 위치에서 데이터 전송은 기가바이트당 0.00 USD입니다.
+	- Direct Connect에서 다른 리전으로 통신할 경우 요금이 부과될 수  있음. 하지만 igw, nat gw보단 저렴.
+	- https://aws.amazon.com/ko/directconnect/pricing/
+- **AWS 프라이빗 네트워크(VPC) 및 AWS 퍼블릭 서비스 엔드포인트(예: S3, DynamoDB) 접근**
+![[direct_connect_mean.png]]
+
+- **AWS 글로벌 네트워크 백본을 활용**
+- DX(Direct Connect) 위치는 신뢰할 수 있는 제3자 제공업체가 제공 -> **Equinix, Cdfi...**
+- 전 세계 31개 AWS 리전에 걸쳐 **115개의 DX 위치** 보유 (현재 기준)
+- 종단 간 프로비저닝 시간은 **4~12주** 소요
+- 전용 연결(Dedicated connection)을 통해 **1, 10 또는 100 Gbps** 대역폭 제공
+- AWS Direct Connect APN 파트너를 활용하여 **1Gbps 미만의 대역폭(50/100/200/400/500 Mbps, 1, 10 Gbps)** 제공
+![[direct_connect_structure.png]]
+### Direct Connect Requirement
+- 요약
+	- **싱글 모드 광케이블(Single-mode fiber)**
+	    - **1Gbps 용 1000BASE-LX (1310 nm) 트랜시버**
+	    - **10Gbps 용 10GBASE-LR (1310 nm) 트랜시버**
+	    - **100Gbps 용 100GBASE-LR4 트랜시버**
+	- **802.1Q VLAN 캡슐화를 지원해야 함**
+	- **1Gbps 이상의 포트 속도의 경우, 포트 자동 협상(Auto-negotiation)을 비활성화해야 함**
+	- **고객 측 라우터(온프레미스)는 BGP(Border Gateway Protocol) 및 BGP MD5 인증을 지원해야 함**
+	- **(선택 사항) 양방향 전달 감지(Bidirectional Forwarding Detection, BFD)**
+### Direct Connect Requirement 상세
+- **싱글 모드 광케이블(Single-mode fiber)**
+    - **1Gbps 용 1000BASE-LX (1310 nm) 트랜시버**
+    - **10Gbps 용 10GBASE-LR (1310 nm) 트랜시버**
+    - **100Gbps 용 100GBASE-LR4 트랜시버**
+![[dx_connection_x.png]]
+![[fiber_x.png]]
+- **802.1Q VLAN 캡슐화를 지원해야 함**
+![[802.1qvlan.png]]
+- **1Gbps 이상의 포트 속도의 경우, 포트 자동 협상(Auto-negotiation)을 비활성화해야 함**
+	- Auto-negotiation은 네트워크 인터페이스가 다른 네트워크 인터페이스와 자동으로 연결 매개변수(속도와 듀플렉스 모드)를 조정하는 기능입니다.
+	- **속도(Speed)**: 네트워크 연결의 전송 속도 (예: 10Mbps, 100Mbps, 1Gbps 등)
+	- **듀플렉스 모드(Duplex)**: 데이터 전송 방향 (예: 반이중(Half-duplex), 전이중(Full-duplex))
+	- 자동 협상은 두 장치가 최적의 속도와 듀플렉스 모드를 자동으로 선택할 수 있도록 도와줍니다.
+	- 1Gbps 미만의 경우, 라우터 공급 업체에 따라 상이함.
+- **고객 측 라우터(온프레미스)는 BGP(Border Gateway Protocol) 및 BGP MD5 인증을 지원해야 함**
+	- **경로-벡터 프로토콜**(Path-Vector protocol)을 사용한 **동적 라우팅**(Dynamic Routing)은 피어(peer) 또는 자율 시스템(AS) 간에 목적지까지의 최적 경로를 교환합니다.
+	- **TCP 기반 프로토콜**로, 포트 **179**를 사용합니다.
+	- **iBGP**: 동일한 AS 내부에서의 라우팅
+	- **eBGP**: 서로 다른 AS 간의 라우팅
+	- 네트워크 경로 선택은 **BGP 라우팅 매개변수**에 의해 영향을 받습니다.
+	    - **AS_PATH**: 경로 상의 AS 목록 (AS 간에 작동)
+	    - **LOCAL_PREF**(로컬 선호도): 동일한 AS 내에서의 경로 우선순위 결정
+	    - **MED**(Multi-Exit Discriminator): AS 간의 경로 선택에 사용
+- **(선택 사항) 양방향 전달 감지(Bidirectional Forwarding Detection, BFD)**
+	- **간단한 Hello 네트워크 프로토콜**
+	- **이웃 피어(neighboring peers) 간의 네트워크 장애 감지 시간을 단축**합니다.
+	- **1초 미만의 빠른 장애 감지 시간**을 제공합니다.
+### BGP AS & ASN
+![[bgp_activate_with_aws_network.png]]
+- 이게 맞는 걸까?
+	- On Premise -> AWS Public Service : BGP Peer가 다이렉트로 붙는다.
+	- Direct Connect Gateway가 연결된 경우 Direct Connect Gateway로 연결된다.
+	- Direct Connect Gateway 없이 연결하면 BGP Peer가 다이렉트로 붙는다.
+### Direct Connection Type
+#### **전용 연결(Dedicated Connections)**:
+- **1Gbps, 10Gbps, 100Gbps 용량**
+- **고객 전용 물리적 이더넷 포트 제공**
+- **AWS에 먼저 요청한 후, AWS Direct Connect 파트너가 완료**
+- 고객의 네트워크 제공자 또는 AWS Direct Connect 파트너가 설정 가능
+#### **호스팅 연결(Hosted Connections)**:
+- **50, 100, 200, 300, 400, 500 Mbps 및 1Gbps, 2Gbps, 5Gbps, 10Gbps 용량**
+- 연결 요청은 **AWS Direct Connect** 파트너를 통해 이루어짐
+- 1, 2, 5, 10Gbps는 **일부 AWS Direct Connect 파트너**에서만 제공
+- AWS는 호스팅 연결에 트래픽 폴리싱(traffic policing)을 적용하여, ==**초과 트래픽은 폐기(dropped)됨**==
+
+| ==항목==        | ==전용 연결 (Dedicated Connections)==      | ==호스팅 연결 (Hosted Connections)==                                                  |
+| ------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
+| **용량**        | 1Gbps, 10Gbps, 100Gbps                 | 50Mbps, 100Mbps, 200Mbps, 300Mbps, 400Mbps, 500Mbps, 1Gbps, 2Gbps, 5Gbps, 10Gbps |
+| **포트 유형**     | 고객 전용 물리적 이더넷 포트                       | AWS Direct Connect 파트너가 제공하는 공유 포트                                               |
+| **요청 및 설정**   | AWS에 요청 후, AWS Direct Connect 파트너가 완료  | AWS Direct Connect 파트너를 통해 요청 및 설정                                               |
+| **설정 주체**     | 고객의 네트워크 제공자 또는 AWS Direct Connect 파트너 | AWS Direct Connect 파트너                                                           |
+| **대역폭 가용성**   | 모든 AWS Direct Connect 위치에서 사용 가능       | 일부 AWS Direct Connect 파트너에서만 사용 가능                                               |
+| **트래픽 관리**    | 트래픽 폴리싱 없음                             | 트래픽 폴리싱 적용 (초과 트래픽은 폐기됨)                                                         |
+| **적합한 사용 사례** | 높은 대역폭과 전용 리소스가 필요한 경우                 | 낮은 또는 중간 대역폭이 필요하고 유연성이 요구되는 경우                                                  |
+#### Dedicated Connection Structure
+- 커넥션 생성 후 최대 ==50개까지의 VIF를 연결==할 수 있음.
+![[dx_dedicated_connection_structure.png]]![[dx_dedicated_connection_structure2.png]]
+
+#### Hosted Connection Structure
+- Dedicated와는 다르게 **1 Connection당 1 VIF만 제공**하므로 추가 연결이 필요하면 ==DX를 여러개 만들어야 한다.==
+![[dx_hosted_connection_structure.png]]![[dx_hosted_connection_structure2.png]]
+![[dx_hosted_vif_dedi.png]]
+![[dx_hosted_vif_hosted.png]]
+- Dedicated Hosted VIF는 **고객이 온전히 제어가 가능**하며, Organization 내 모든 연결을 설정할 수 있다.
+- Hosted의 경우, **Partner가 일부 제어를 하고 있어 완전 제어는 불가능하지만**, Organization 내 모든 연결을 설정할 수 있다.
+![[dx_hosted_vif_architecture.png]]
+### Direct Connect 설치 절차
+#### Dedicated
+1. **AWS 리전, DX(Direct Connect) 위치를 선택하고, AWS 콘솔, CLI 또는 API를 통해 연결 요청을 제출합니다.**
+2. **AWS는 72시간 이내에 포트를 프로비저닝하고, LOA-CFA(Letter of Authorization – Connection Facility Assignment)를 제공합니다.**
+    - LOA-CFA는 승인서 및 연결 시설 할당서를 의미합니다.
+3. **LOA에는 해당 시설 내에서 할당된 포트의 경계(demarcation) 정보가 포함되어 있습니다.**
+4. **귀하의 조직이 DX 위치에 물리적으로 존재하는 경우, 시설 내에서 크로스-커넥트(cross-connect)를 요청하여 AWS 장치에 연결할 수 있습니다.**
+5. **그렇지 않은 경우, LOA 사본을 DX APN 파트너에게 제공하고, 파트너가 크로스-커넥트를 주문합니다.**
+6. **연결이 완료되면, 귀하의 장비에서 Tx/Rx 광 신호를 수신합니다.** (-18 to -25db 적정)
+7. **이제 프라이빗 또는 퍼블릭 가상 인터페이스(Virtual Interface)를 생성하여 VPC 또는 AWS 퍼블릭 서비스에 연결할 수 있습니다.**
+![[dx_step_dedicated.png]]
+#### Hosted
+1. **호스팅 연결(Hosted Connection)을 주문하려면 LOA(Letter of Authorization)가 필요하지 않습니다. Direct Connect 파트너에 직접 연락하여 연결을 주문할 수 있습니다.**
+2. **12자리 AWS 계정 번호를 파트너에게 제공합니다.**
+3. **파트너는 호스팅 연결을 설정하며, 이 연결은 귀하의 AWS 계정(지정된 리전)에서 수락할 수 있게 됩니다.**
+4. **연결을 수락하면, ==관련 포트 사용 시간 및 데이터 전송 요금에 대한 청구가 시작됩니다.==**
+	1. 연결 요청 후 연결 완료를 하지 않으면 AWS는 최대 90일을 대기하고 90일이 넘어가면 사용료에 대한 청구할 수 있음.
+![[dx_step_hosted.png]]
+- **호스팅 연결(Hosted Connection)과 혼동하지 마세요.**
+- **VIF(Virtual Interface)를 생성할 때 "다른 AWS 계정"을 선택할 수 있습니다.**
+    - 이 경우, **Direct Connect 연결의 소유자는 여전히 귀하**이지만, VIF는 다른 AWS 계정에 생성되며, 해당 계정이 이를 수락해야 합니다.
+- **프라이빗 VIF의 경우, 다른 계정은 VIF를 VGW(Virtual Private Gateway)와 연결해야 합니다.**
+- **1Gbps 미만의 연결은 하나의 가상 인터페이스만 지원합니다.**
+- **이 방식은 일반적으로 중앙 네트워크 팀이 DX 연결을 관리하고, 비즈니스 계정을 위해 VIF를 프로비저닝하는 시나리오에서 사용됩니다.**
+![[dx_step_hosted_vif2.png]]
+- ==LOA-CFA가 나올 수 있는데, Dedicated 설정시에만 필요하다는 것을 인지하고 있을 것.==
+
+### DX Virtual Interfaces
+- **VIF**는 DX 연결을 위해 필수적인 설정입니다.
+- 주로 802.1Q VLAN으로 구성됨.
+- **Public VIF**는 퍼블릭 서비스, **Private VIF**는 VPC, **Transit VIF**는 Transit Gateway와의 연결에 각각 사용됩니다.
+- 이를 통해 AWS와 온프레미스 환경 간의 안정적이고 효율적인 네트워크 연결이 가능합니다.
+	1. **Public VIF**
+	    - **기능**: 모든 AWS 퍼블릭 IP 주소(예: S3, DynamoDB)에 연결할 수 있게 해줍니다.
+	    - **용도**: AWS의 퍼블릭 서비스와 통신할 때 사용됩니다. (Elastic IP 포함)
+	1. **Private VIF**
+	    - **기능**: VPG 또는 Direct Connect Gateway를 통해 **VPC**에 연결할 수 있게 해줍니다.
+	    - **용도**: 프라이빗 리소스(예: EC2 인스턴스)와 통신할 때 사용됩니다.
+	2. **Transit VIF**
+	    - **기능**: Direct Connect Gateway를 통해 **Transit Gateway**에 연결할 수 있게 해줍니다.
+	    - **용도**: 여러 VPC와 온프레미스 네트워크를 중앙에서 연결할 때 사용됩니다.
+![[dxvif_archi.png]]
+![[dxvif_archi2.png]]![[dxvif_archi3.png]]
+
+### VIF parameter
+1. **Connection**:
+    - DX 연결 또는 LAG(Link Aggregation Group)를 사용하여 네트워크 연결을 구성합니다.
+    - LAG는 여러 물리적 연결을 하나의 논리적 연결로 묶어 대역폭과 안정성을 높입니다.
+1. **VIF 설정**:
+    - **VIF Type**: Public, Private, Transit 중 선택.
+    - **VIF Name**: 임의로 지정 가능.
+    - **VIF Owner**: 본인 계정 또는 다른 계정(호스팅된 VIF).
+2. **Gateway Type (Private VIF만 해당)**:
+    - Virtual Private Gateway 또는 Direct Connect Gateway 선택.
+3. **VLAN**:
+    - VLAN ID는 1-4094 범위 내에서 중복 없이 설정.
+    - Hosted Connection의 경우 파트너가 VLAN ID를 미리 구성.
+4. **BGP 설정**:
+    - **IPv4**:
+        - Public VIF: 사용자가 퍼블릭 IP(/30)를 할당.
+        - Private VIF: AWS가 기본적으로 169.254.0.0/16 범위의 프라이빗 IP 제공.
+    - **IPv6**: AWS가 자동으로 /125 IPv6 CIDR를 할당하며, 사용자가 직접 지정 불가.
+5. **BGP ASN (Autonomous System Number)**:
+    - **퍼블릭 ASN**:
+        - 고객이 소유해야 하며, **IANA**에서 할당받은 ASN을 사용해야 합니다.
+    - **프라이빗 ASN**:
+        - 사용자가 직접 설정할 수 있으며, 범위는 다음과 같습니다:
+            - **16-bit ASN**: 64512 ~ 65534
+            - **32-bit ASN**: 1 ~ 2147483647
+6. **BGP MD5 인증 키**:
+    - BGP 세션의 보안을 위해 MD5 인증 키를 설정할 수 있습니다.
+    - 사용자가 키를 제공하지 않으면 AWS가 자동으로 생성합니다.
+7. **광고할 Prefixes (Public VIF만 해당)**:
+    - **Public VIF**를 사용할 경우, BGP를 통해 광고할 **퍼블릭 IPv4 경로** 또는 **IPv6 경로**를 지정해야 합니다.
+    - 이는 AWS와의 BGP 세션을 통해 네트워크 경로를 공유하는 데 사용됩니다.
+8.  **Jumbo Frames (Private 및 Transit VIF만 해당)**:
+    - **Private VIF**:
+        - **9001 MTU**를 지원하지만, 이는 전파된 경로(propagated routes)에만 적용됩니다.
+        - 기본 MTU 값은 **1500**입니다.
+    - **Transit VIF**:
+        - **8500 MTU**를 지원합니다.
+### ip-ranges.json
+- AWS에서 사용하는 IP 주소를 json형태로 제공하고 있다.
+- https://ip-ranges.amazonaws.com/ip-ranges.json
+- 서비스, 리전, ipv4, 6까지 필터링이 가능하다.
+- AWS Public IP를 제어하는 데 효과적이다.
+![[ip_ranges.png]]
+### Public VIF
+- AWS의 전체 AWS Public IP를 사용할 수 있도록 하기 위함이다.
+![[public_vif.png]]
+- **AWS 퍼블릭 IP와 글로벌 연결 지원**
+    - 사용자의 네트워크가 AWS의 모든 퍼블릭 IP에 연결 가능함.
+    - S3, SQS, DynamoDB 같은 퍼블릭 엔드포인트에 접근 가능.
+- **퍼블릭 VIF 생성 요건**
+    - AWS 라우터 및 사용자의 라우터 퍼블릭 IP 필요 (CIDR /30).
+    - 퍼블릭 IP가 없을 경우 AWS에서 /31 범위를 제공받을 수 있음.
+- **IP 주소 광고 조건**
+    - 광고할 IPv4 주소 프리픽스를 명시해야 함.
+    - AWS는 인터넷 등록 기관을 통해 사용자의 IP 소유권을 검증.
+- **BGP를 통한 AWS 프리픽스 광고**
+    - AWS는 BGP 세션을 통해 EC2, S3, Amazon.com 등의 프리픽스를 광고.
+    - Amazon 프리픽스 외의 네트워크에는 접근 불가.
+- **프리픽스 관리**
+    - 최신 Amazon 프리픽스는 `ip-ranges.json`에서 확인 가능.
+    - 고객 라우터의 방화벽을 이용해 특정 Amazon 프리픽스 접근 제한 가능.
+- **BGP 세션의 광고 제한**
+    - 고객 라우터에서 AWS로 BGP 세션당 최대 **1000개의 경로 프리픽스**만 광고 가능.
+#### 요약
+- **Public VIF를 사용하면 AWS 퍼블릭 IP와 글로벌 연결 가능.**
+- **Public VIF 생성 시 IPv4 /30 CIDR의 AWS 및 고객 라우터 IP 필요.**
+- **BGP 세션을 통해 AWS가 Amazon 관련 프리픽스를 광고하며, 비-Amazon 프리픽스는 접근 불가.**
+- **최대 1000개의 경로 프리픽스를 BGP 세션당 광고 가능.**
+- **퍼블릭 IP가 없는 경우, AWS에서 /31 범위를 제공받을 수 있음.**
+- **AWS는 IP 프리픽스 광고 시, 사용자의 소유권을 인터넷 등록 기관을 통해 검증.**
+### Private VIF
+#### 요약
+- **Private VIF는 VPC 내부 리소스(EC2, RDS, Redshift 등)에 Private IP로 연결하는 용도.**
+- **VPC → VGW → Private VIF로 연결해야 하며, VGW와 Private VIF는 같은 리전에 존재해야 함.**
+- **BGP 세션에서 VPC의 모든 프리픽스를 고객 라우터로 전달.**
+- **최대 100개의 프리픽스를 AWS에 광고할 수 있으며, 서브넷 라우트 테이블에 자동 전파 가능.**
+- **100개 초과 시 프리픽스를 요약(summarization)하여 개수를 줄여야 함.**
+- **전파된 경로는 IGW(인터넷 게이트웨이) 경로보다 우선순위가 높음.**
+- **MTU 기본값은 1500이며, 전파된 경로는 9001까지 지원 가능.**
+- **VPC DNS 리졸버(Base + 2)와 VPC 게이트웨이 엔드포인트에 접근 불가.**
+![[private_vif.png]]
+![[private_vif_nega.png]]
+#### 구성 및 제한사항
+- **VPC → VGW(Virtual Private Gateway) → Private VIF로 연결해야 하며, VGW와 Private VIF는 같은 AWS 리전에 있어야 함.**
+- **VPC DNS 리졸버(Base + 2) 및 VPC 게이트웨이 엔드포인트에 접근할 수 없음.**
+### Transit VIF
+#### **기능 및 구성**
+- **Transit VIF는 Direct Connect와 Transit Gateway를 연결하는 역할을 함.**
+- **Transit VIF → Direct Connect Gateway(DX Gateway) → Transit Gateway 순으로 연결됨.**
+- **Direct Connect Gateway에 여러 개의 Transit Gateway를 연결할 수 있음.**
+- **하나의 Transit Gateway에 여러 개의 DX Gateway를 연결할 수 있음.**
+#### **기술적 제한 및 요구사항**
+- **MTU는 기본 1500, Jumbo Frames의 경우 최대 8500까지 지원.**
+- **DX Gateway와 Transit Gateway의 ASN(Autonomous System Number)은 서로 달라야 함.**
+    - **둘 다 기본 ASN(64512)을 사용할 경우, 연결이 실패함.**
+![[transit_vif.png]]
+### DX Gateway with Private VIF and VPG
+- **문제점**: 동일한 Direct Connect 연결을 통해 여러 개의 VPC에 접근하고 싶습니다.
+- **해결책**: AWS **Direct Connect Gateway**를 사용합니다.
+    - **하나의 Direct Connect Gateway**를 통해 **여러 개의 VPC**(같은 리전 또는 다른 리전, 같은 계정 또는 다른 계정의 VPC)와 연결할 수 있습니다.
+    - **연결 방식**: **Virtual Private Gateway(VGW)** 또는 **Transit Gateway(TGW)** 사용.
+- **Direct Connect Gateway는 글로벌 네트워크 장치이며 모든 AWS 리전에서 접근 가능**합니다.
+- **Direct Connect는 Private VIF 또는 Transit VIF를 통해 통합됩니다.**
+- **DX Gateway는 VPC ↔ 온프레미스 연결용이며, 퍼블릭 엔드포인트 연결에는 사용할 수 없습니다.**
+- **Private VIF 또는 Transit VIF와 Direct Connect Gateway는 같은 AWS 계정에서 소유해야 합니다.**
+    - **그러나 연결할 VPC(VGW) 또는 Transit Gateway는 같은 계정이거나 다른 계정일 수 있습니다.**
+#### **기능 및 구성**
+- **DX Gateway를 사용하면 하나의 Direct Connect 연결을 통해 여러 VPC와 연결 가능.**
+- **VPC는 같은 리전 또는 다른 리전에 있을 수 있으며, 같은 AWS 계정 또는 다른 AWS 계정에 속할 수 있음.**
+- **Direct Connect는 Private VIF 또는 Transit VIF를 통해 연결됨.**
+- **DX Gateway는 글로벌 서비스이며, 모든 AWS 리전에서 사용 가능.**
+
+#### **제한 사항**
+- **DX Gateway는 온프레미스 ↔ VPC 연결용이며, 퍼블릭 엔드포인트 연결 불가.**
+- Private VIF 또는 Transit VIF 및 DX Gateway는 **같은 AWS 계정에서 소유해야 함.**
+    - 그러나 연결되는 VPC(VGW) 또는 Transit Gateway는 같은 계정 또는 다른 계정에 속할 수 있음.
+- 현재 Direct Connect Gateway는 최대 20 VGW (VPC)까지만 처리됨.
+![[dx_gateway_why.png]]
+- Virginia에 생성된 DX가 같은 리전에는 Private VIF는 연결하지만 **다른 리전에는 연결하지 못하는 이슈**
+![[transit_vif_why2.png]]
+- DX Gateway를 이용해 모든 리전을 통합 관리할 수 있음.
+![[dx_gateway_vif_same_acc.png]]
+- DX Gateway와 Private VIF는 같은 계정에 들어 있어야 함.
+![[dx_gateway_no_overwrap.png]]
+- VPC간 라우팅을 연동해주는 용도가 아니므로 거쳐가는 트래픽은 지원하지 않음.
+![[dx_gateway_max_100_route.png]]
+- 최대 100개 (ipv4, ipv6 각각)의 라우트를 광고할 수 있다. (Private VIF, Transit VIF 모두 동일)
+![[dx_gateway_max_20_vgw_cover.png]]
+- 20개의 VPG연결을 피하려면 이렇게도 가능
+![[dx_gateway_multi_dx.png]]
+- 글로벌 리전인 경우 이런 방식으로도 할 수 있다.
+#### 요약
+- **글로벌하게 접근 가능**
+- **온프레미스 네트워크와 AWS VPC 간의 프라이빗 연결을 제공**
+- **하나의 DX Gateway는 최대 20개의 VGW(VPC)와 연결 가능** (AWS 리전 및 계정 간 연결 가능)
+    - _이 제한은 변경될 수 있으므로 최신 AWS 문서를 참고하세요._
+- **VPC 간 CIDR은 겹치면 안 됨**
+- **DX Gateway를 통한 VPC 간 통신(VPC ↔ VPC)은 허용되지 않음**
+- **DX Gateway와 Private VIF는 같은 AWS 계정에서 생성해야 함**
+- **DX Gateway 사용에는 추가 비용이 없음**
+    - _단, 데이터 송출(egress) 요금은 원격 AWS 리전 및 DX 포트 사용 시간에 따라 부과됨._
+### DX Gateway with Transit VIF and Transit Gateway
+#### 기본 구성
+![[dx_gateway_transit_vif1.png]]
+#### Multi Transit VIF
+![[Pasted image 20250202155711.png]]
+- 현재 전용 연결은 4개의 Transit VIF가 최대임
+![[Pasted image 20250202155859.png]]
+- DX Gateway당 6개의 TGW 연결이 가능함.
+![[Pasted image 20250202155945.png]]
+- Transit VIF와 DX Gateway는 같은 계정이어야 한다는 사실을 잊으면 안됨.
+#### Case1
+![[Pasted image 20250202160209.png]]
+![[Pasted image 20250202160226.png]]
+#### Case2
+![[Pasted image 20250202160249.png]]
+![[Pasted image 20250202160307.png]]
+#### 요약
+- **하나의 Direct Connect 전용 연결(Direct Connect Dedicated Connection)당 최대 4개의 Transit VIF를 연결할 수 있음.**
+- **하나의 Direct Connect 호스팅 연결(Direct Connect Hosted Connection)당 최대 1개의 Transit VIF만 연결할 수 있음.**
+- **Transit Gateway(TGW)는 Direct Connect Gateway(DX Gateway)와 연결됨.**
+- **하나의 DX Gateway에 최대 6개의 TGW를 연결할 수 있음.**
+- **TGW 간 피어링을 통해 AWS 리전 간 VPC 간 통신이 가능함.**
+### AWS Direct Connect – SiteLink
+- **SiteLink는 Private VIF 또는 Transit VIF에서 활성화할 수 있음.**
+- **전용(Dedicated) 또는 호스팅(Hosted) Direct Connect 연결과 다양한 포트 속도에서 지원됨.**
+- **트래픽은 AWS 글로벌 네트워크를 통해 가장 짧은 경로로 전송됨.**
+- **몇 분 안에 SiteLink를 켜거나 끌 수 있음.**
+- **IPv4 및 IPv6 라우팅 프리픽스와 트래픽을 지원함.**
+- **고객 위치 간 풀 메쉬(Full Mesh) 또는 격리된 네트워크 연결을 지원함.**
+![[Pasted image 20250202161016.png]]
+![[Pasted image 20250202161032.png]]
+#### **기능 및 장점**
+- **Private VIF 및 Transit VIF에서 SiteLink 활성화 가능.**
+- **전용(Dedicated) 및 호스팅(Hosted) DX 연결 모두 지원, 다양한 포트 속도에서 사용 가능.**
+- **트래픽은 AWS 글로벌 네트워크에서 가장 짧은 경로를 선택하여 최적화됨.**
+- **몇 분 안에 SiteLink 기능을 활성화하거나 비활성화 가능.**
+- **IPv4 및 IPv6 트래픽과 라우팅 프리픽스를 지원.**
+- **고객 네트워크 간 풀 메쉬(Full Mesh) 또는 개별적으로 격리된 연결 구성 가능.**
+#### **제한 사항**
+- **SiteLink를 사용하려면 Private VIF 또는 Transit VIF가 필요함.**
+- **전용(Dedicated) 또는 호스팅(Hosted) DX 연결 유형에 따라 설정이 달라질 수 있음.**
+### Direct Connect Routing Policies and BGP Communities
+#### **VPC에서 나가는 트래픽의 라우팅 우선순위**
+
+1. **가장 긴 프리픽스(Longest Prefix Match)가 우선 적용됨.**
+    - 예: `10.10.2.15/32`가 `10.10.2.0/24`보다 우선순위가 높음.
+2. **정적(Static) 라우트가 전파(Propagated)된 라우트보다 우선함.**
+3. **전파된(Propagated) 라우트가 적용됨.**
+    1. **Direct Connect BGP 라우트 (동적 라우트)**
+    2. **VPN 정적(Static) 라우트**
+    3. **VPN BGP 라우트 (동적 라우트)**
+![[Pasted image 20250202162501.png]]
+- **라우팅 정책은 Direct Connect 연결을 통해 트래픽이 흐를 때 라우팅 결정에 영향을 미침.**
+- **인바운드(Inbound) 라우팅 정책**: 온프레미스 → AWS 방향의 트래픽을 제어하는 정책.
+- **아웃바운드(Outbound) 라우팅 정책**: AWS → 온프레미스 방향의 트래픽을 제어하는 정책.
+- **라우팅 정책과 BGP 커뮤니티는 Public VIF와 Private/Transit VIF에서 다르게 동작함.**
+![[Pasted image 20250202163422.png]]
+#### **Public VIF**
+1. **경로 선택(Path Selection) 우선순위 (BGP 속성):**
+    - **Longest prefix** (가장 긴 프리픽스 우선).
+    - **AS_PATH** (BGP 경로 속성).
+2. **경로 전파 범위(Route Propagation Scope):**
+    - **Inbound**(온프레미스 → AWS)
+        - BGP 커뮤니티 태그: `7224:9100`, `7224:9200`, `7224:9300`.
+    - **Outbound**(AWS → 온프레미스)
+        - BGP 커뮤니티 태그: `7224:8100`, `7224:8200`, 또는 **No tag**.
+    - **NO_EXPORT**: 해당 경로를 외부로 전파하지 않음.
+
+---
+#### **Private/Transit VIF**
+1. **경로 선택(Path Selection) 우선순위 (BGP 속성):**
+    - **Longest prefix** (가장 긴 프리픽스 우선).
+    - **AS_PATH** (BGP 경로 속성).
+2. **로컬 우선순위(Local Preference) BGP 커뮤니티 태그:**
+    - **Low Priority:** `7224:7100`.
+    - **Medium Priority:** `7224:7200`.
+    - **High Priority:** `7224:7300`.
+### Public VIF Routing Policies
+#### **Inbound (온프레미스 → AWS)**
+- **광고할 공용 프리픽스를 명확히 지정해야 하며, 소유권과 인터넷 등록 필요.**
+- **트래픽은 Amazon 공용 프리픽스로만 전달 가능.**
+- **연결 간 전이적 라우팅(Transitive Routing) 불가.**
+- **AWS는 인바운드 트래픽에 대해 패킷 필터링 수행.**
+#### **Outbound (AWS → 온프레미스)**
+- **Longest Prefix Match와 AS_PATH를 사용하여 라우팅 제어 가능.**
+- **AWS는 모든 로컬 및 원격 리전의 공용 프리픽스를 광고하며, NO_EXPORT BGP 커뮤니티 태그와 함께 제공.**
+- **추가적인 BGP 커뮤니티 태그: `7224:8100`, `7224:8200`.**
+- **광고된 프리픽스는 Direct Connect 연결을 넘어서는 네트워크로 전파될 수 없음.**
+- **여러 Direct Connect 연결 간 트래픽 부하 분산(Load Sharing)을 위해 ECMP를 활용 가능.**
+![[Pasted image 20250202164026.png]]
+### Multiple DX connections traffic routing scenarios using Routing policies for Public VIF
+#### Active-Active connection using Public VIF
+##### **Public ASN 사용 시**
+- **고객 게이트웨이는 동일한 BGP 속성으로 동일한 프리픽스를 두 개의 Public Virtual Interface(Public VIF)에 광고해야 함.**
+- **이 구성은 두 개의 Public VIF를 통해 트래픽을 부하 분산(Load Balancing)함.**
+##### **Private ASN 사용 시**
+- **Public VIF에서 부하 분산(Load Balancing)은 지원되지 않음.**
+![[Pasted image 20250202164925.png]]
+![[Pasted image 20250202164939.png]]
+#### Active-Passive Connection using Public VIF
+##### **Public ASN 사용 시**
+- **고객 게이트웨이는 두 BGP 세션에서 동일한 프리픽스(소유한 공용 IP 또는 네트워크)를 광고해야 합니다.**
+- **보조 연결(Secondary Connection)에서는 추가 AS_Path prepends를 사용하여 온프레미스 공용 프리픽스를 광고합니다.**
+- **Local Preference(local-pref)를 증가시켜 온프레미스 라우터가 항상 올바른 경로(Primary Connection)를 선택하도록 보장합니다.**
+##### **Private ASN 사용 시**
+- **Primary Connection에서 더 긴 프리픽스를 사용합니다.**
+    - 예: Primary Connection에서 두 개의 프리픽스(`X.X.X.0/25` 및 `X.X.X.128/25`)를 광고하고, Secondary Connection에서는 하나의 프리픽스(`X.X.X.0/24`)를 광고합니다.
+![[Pasted image 20250202165239.png]]
