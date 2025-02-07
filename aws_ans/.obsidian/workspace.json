@@ -4,39 +4,45 @@
     "type": "split",
     "children": [
       {
-        "id": "003c5eb9890aaade",
+        "id": "9eafa5cebf222f87",
         "type": "tabs",
         "children": [
           {
-            "id": "00b0287c66aace68",
+            "id": "71652b7a07bb3cc8",
             "type": "leaf",
+            "pane-relief:history-v1": {
+              "pos": 1,
+              "stack": [
+                {
+                  "title": "ANS Study",
+                  "icon": "lucide-file",
+                  "state": "{\"type\":\"markdown\",\"state\":{\"file\":\"ANS Study.md\",\"mode\":\"source\",\"source\":false},\"icon\":\"lucide-file\",\"title\":\"ANS Study\"}",
+                  "eState": "{\"cursor\":{\"from\":{\"line\":0,\"ch\":0},\"to\":{\"line\":0,\"ch\":0}}}"
+                },
+                {
+                  "state": "{}",
+                  "eState": "{}"
+                },
+                {
+                  "title": "0. Index",
+                  "icon": "lucide-file",
+                  "state": "{\"type\":\"markdown\",\"state\":{\"file\":\"0. Index.md\",\"mode\":\"source\",\"source\":false},\"icon\":\"lucide-file\",\"title\":\"0. Index\"}",
+                  "eState": "{\"cursor\":{\"from\":{\"line\":10,\"ch\":17},\"to\":{\"line\":10,\"ch\":17}}}"
+                }
+              ]
+            },
             "state": {
               "type": "markdown",
               "state": {
-                "file": "ans_md.md",
+                "file": "10. AWS Direct Connect (DX).md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "ans_md"
-            }
-          },
-          {
-            "id": "7fa2530a1071cedf",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "ans_md.md",
-                "mode": "preview",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "ans_md"
+              "title": "10. AWS Direct Connect (DX)"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -52,6 +58,15 @@
           {
             "id": "acf66450a02d42c5",
             "type": "leaf",
+            "pane-relief:history-v1": {
+              "pos": 0,
+              "stack": [
+                {
+                  "state": "{}",
+                  "eState": "{}"
+                }
+              ]
+            },
             "state": {
               "type": "file-explorer",
               "state": {
@@ -65,6 +80,15 @@
           {
             "id": "0d7fef4892474e3d",
             "type": "leaf",
+            "pane-relief:history-v1": {
+              "pos": 0,
+              "stack": [
+                {
+                  "state": "{}",
+                  "eState": "{}"
+                }
+              ]
+            },
             "state": {
               "type": "search",
               "state": {
@@ -82,6 +106,15 @@
           {
             "id": "83a8c7716262993c",
             "type": "leaf",
+            "pane-relief:history-v1": {
+              "pos": 0,
+              "stack": [
+                {
+                  "state": "{}",
+                  "eState": "{}"
+                }
+              ]
+            },
             "state": {
               "type": "bookmarks",
               "state": {},
@@ -106,6 +139,15 @@
           {
             "id": "cd51cc17a6449ef0",
             "type": "leaf",
+            "pane-relief:history-v1": {
+              "pos": 0,
+              "stack": [
+                {
+                  "state": "{}",
+                  "eState": "{}"
+                }
+              ]
+            },
             "state": {
               "type": "backlink",
               "state": {
@@ -125,6 +167,15 @@
           {
             "id": "3edbf27bb808c35d",
             "type": "leaf",
+            "pane-relief:history-v1": {
+              "pos": 0,
+              "stack": [
+                {
+                  "state": "{}",
+                  "eState": "{}"
+                }
+              ]
+            },
             "state": {
               "type": "outgoing-link",
               "state": {
@@ -139,6 +190,15 @@
           {
             "id": "907373e7f9cda147",
             "type": "leaf",
+            "pane-relief:history-v1": {
+              "pos": 0,
+              "stack": [
+                {
+                  "state": "{}",
+                  "eState": "{}"
+                }
+              ]
+            },
             "state": {
               "type": "tag",
               "state": {
@@ -152,6 +212,15 @@
           {
             "id": "3a93a7297e45d167",
             "type": "leaf",
+            "pane-relief:history-v1": {
+              "pos": 0,
+              "stack": [
+                {
+                  "state": "{}",
+                  "eState": "{}"
+                }
+              ]
+            },
             "state": {
               "type": "outline",
               "state": {
@@ -164,6 +233,15 @@
           {
             "id": "79e32813581d4c04",
             "type": "leaf",
+            "pane-relief:history-v1": {
+              "pos": 0,
+              "stack": [
+                {
+                  "state": "{}",
+                  "eState": "{}"
+                }
+              ]
+            },
             "state": {
               "type": "git-view",
               "state": {},
@@ -189,20 +267,30 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "7fa2530a1071cedf",
+  "active": "acf66450a02d42c5",
   "lastOpenFiles": [
-    "Pasted image 20250202165239.png",
-    "Pasted image 20250202164939.png",
-    "Pasted image 20250202164925.png",
-    "Pasted image 20250202164026.png",
-    "Pasted image 20250202163422.png",
-    "Pasted image 20250202163347.png",
-    "Pasted image 20250202163345.png",
-    "Pasted image 20250202162501.png",
-    "Pasted image 20250202161032.png",
-    "Pasted image 20250202161016.png",
-    "Pasted image 20250202160307.png",
-    "ans_md.md",
+    "ANS Study.md",
+    "10. AWS Direct Connect (DX).md",
+    "image/Pasted image 20250207183637.png",
+    "0. Index.md",
+    "8. Transit Gateway.md",
+    "4. Network Performance and Optimization.md",
+    "9. Hybrid Network Basic.md",
+    "7. VPC Interface Endpoint and PrivateLink.md",
+    "6. VPC Gateway Endpoint.md",
+    "5. VPC Peering.md",
+    "3. VPC DNS and DHCP.md",
+    "1. Amazon VPC Fundamentals.md",
+    "2. Additionnal VPC Feature.md",
+    "image/Pasted image 20250207175318.png",
+    "image/Pasted image 20250207175340.png",
+    "image/Pasted image 20250207162806.png",
+    "image/Pasted image 20250207174410.png",
+    "image/Pasted image 20250207174400.png",
+    "image/Pasted image 20250207173745.png",
+    "image/Pasted image 20250207173046.png",
+    "image/Pasted image 20250207173034.png",
+    "image/Pasted image 20250207172730.png",
     "image",
     "Welcome.md"
   ]
